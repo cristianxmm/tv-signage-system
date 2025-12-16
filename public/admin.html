@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Control</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
+        input { width: 70%; padding: 10px; }
+        button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; }
+        button:hover { background: #0056b3; }
+        .presets { margin-top: 20px; display: grid; gap: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Torre de Control</h1>
+    
+    <div>
+        <input type="text" id="urlInput" placeholder="https://...">
+        <button onclick="sendCommand()">Enviar a TVs</button>
+    </div>
+
+    <div class="presets">
+        <h3>Presets:</h3>
+        <button onclick="setAndSend('https://es.wikipedia.org/wiki/Ingeniería_de_software')">Wikipedia</button>
+        <button onclick="setAndSend('https://www.bing.com')">Bing</button>
+        <button onclick="setAndSend('about:blank')">Pantalla Negra</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        function setAndSend(url) {
+            document.getElementById('urlInput').value = url;
+            sendCommand();
+        }
+
+        function sendCommand() {
+            const url = document.getElementById('urlInput').value;
+            if(!url) return alert("Escribe una URL");
+            
+            socket.emit('admin_command', {
+                target: 'all',
+                url: url
+            });
+        }
+    </script>
+</body>
+</html>
