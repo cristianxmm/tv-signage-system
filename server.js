@@ -84,4 +84,11 @@ io.on('connection', (socket) => {
     // Unir la TV a su sala correspondiente (ej: "recepcion")
     socket.on('join', (room) => {
         socket.join(room);
-        console.log(`📺 TV se unió al canal
+        console.log(`📺 TV se unió al canal: ${room}`);
+    });
+});
+
+// --- INICIO ---
+http.listen(PORT, () => {
+    console.log(`🚀 Servidor Multimedia corriendo en http://localhost:${PORT}`);
+});
