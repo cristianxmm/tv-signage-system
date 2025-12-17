@@ -2,47 +2,141 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel de Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torre de Control TV</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
-        input { width: 70%; padding: 10px; }
-        button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; }
-        button:hover { background: #0056b3; }
-        .presets { margin-top: 20px; display: grid; gap: 10px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; background-color: #f4f4f9; color: #333; }
+        h1 { text-align: center; color: #2c3e50; }
+        
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .card h2 { margin-top: 0; font-size: 1.2rem; color: #555; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        
+        label { display: block; margin-top: 10px; font-weight: bold; }
+        input[type="text"], input[type="file"] { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        
+        button { cursor: pointer; border: none; padding: 12px 20px; border-radius: 5px; font-size: 1rem; transition: background 0.3s; margin-top: 10px; }
+        .btn-primary { background-color: #007bff; color: white; width: 100%; }
+        .btn-primary:hover { background-color: #0056b3; }
+        
+        .btn-success { background-color: #28a745; color: white; width: 100%; }
+        .btn-success:hover { background-color: #218838; }
+
+        .presets { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
+        .btn-preset { background-color: #6c757d; color: white; }
+        .btn-preset:hover { background-color: #5a6268; }
+
+        #uploadStatus { margin-top: 10px; color: #666; font-style: italic; }
+        
+        .tip { font-size: 0.85rem; color: #888; margin-top: 5px; }
     </style>
 </head>
 <body>
-    <h1>Torre de Control</h1>
-    
-    <div>
+
+    <h1>📡 Torre de Control</h1>
+
+    <div class="card">
+        <h2>1. Configuración de Envío</h2>
+        
+        <label>🎯 ¿A quién enviar?</label>
+        <div class="tip">Escribe "all" para todas, o el nombre de la sala (ej: "ventas", "recepcion").</div>
+        <input type="text" id="targetInput" value="all" placeholder="Nombre de la sala...">
+
+        <label>🔗 URL a mostrar</label>
         <input type="text" id="urlInput" placeholder="https://...">
-        <button onclick="sendCommand()">Enviar a TVs</button>
+        
+        <button class="btn-primary" onclick="sendCommand()">ENVIAR SEÑAL</button>
     </div>
 
-    <div class="presets">
-        <h3>Presets:</h3>
-        <button onclick="setAndSend('https://es.wikipedia.org/wiki/Ingeniería_de_software')">Wikipedia</button>
-        <button onclick="setAndSend('https://www.bing.com')">Bing</button>
-        <button onclick="setAndSend('about:blank')">Pantalla Negra</button>
+    <div class="card">
+        <h2>2. Publicar Excel (KPIs)</h2>
+        <div class="tip">Sube un archivo .xlsx y se mostrará automáticamente en las TVs seleccionadas arriba.</div>
+        
+        <input type="file" id="excelInput" accept=".xlsx, .xls">
+        <button class="btn-success" onclick="subirExcel()">SUBIR Y MOSTRAR</button>
+        <p id="uploadStatus"></p>
+    </div>
+
+    <div class="card">
+        <h2>3. Accesos Rápidos</h2>
+        <div class="presets">
+            <button class="btn-preset" onclick="setAndSend('about:blank')">⚫ Pantalla Negra</button>
+            <button class="btn-preset" onclick="setAndSend('https://es.wikipedia.org/wiki/Naturaleza')">🌍 Wikipedia</button>
+            <button class="btn-preset" onclick="setAndSend('https://www.bing.com')">🔍 Bing</button>
+            </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
 
+        // Función auxiliar para los botones de presets
         function setAndSend(url) {
             document.getElementById('urlInput').value = url;
             sendCommand();
         }
 
+        // Función principal para enviar URL
         function sendCommand() {
             const url = document.getElementById('urlInput').value;
-            if(!url) return alert("Escribe una URL");
+            const target = document.getElementById('targetInput').value;
+
+            if(!url || !target) return alert("Falta la URL o el Destino");
             
             socket.emit('admin_command', {
-                target: 'all',
+                target: target,
                 url: url
             });
+            
+            // Efecto visual simple para saber que se envió
+            const btn = document.querySelector('.btn-primary');
+            const originalText = btn.innerText;
+            btn.innerText = "¡ENVIADO! 🚀";
+            setTimeout(() => btn.innerText = originalText, 1000);
+        }
+
+        // Función para subir Excel
+        async function subirExcel() {
+            const input = document.getElementById('excelInput');
+            const status = document.getElementById('uploadStatus');
+            const target = document.getElementById('targetInput').value;
+            
+            if(input.files.length === 0) return alert("Selecciona un archivo Excel primero");
+
+            const formData = new FormData();
+            formData.append('archivo', input.files[0]);
+
+            status.innerText = "⏳ Procesando archivo...";
+
+            try {
+                // Hacemos el POST al servidor
+                const response = await fetch('/subir-excel', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.url) {
+                    status.innerText = "✅ ¡Listo! Enviando a pantallas...";
+                    
+                    // Construimos la URL completa (http://localhost:3000/datos.html)
+                    const fullUrl = window.location.origin + data.url;
+                    
+                    // Rellenamos el input de URL para que el usuario vea qué está pasando
+                    document.getElementById('urlInput').value = fullUrl;
+                    
+                    // Enviamos la orden automáticamente
+                    socket.emit('admin_command', {
+                        target: target, 
+                        url: fullUrl 
+                    });
+                } else {
+                    status.innerText = "⚠️ Error: El servidor no devolvió una URL.";
+                }
+            } catch (err) {
+                console.error(err);
+                status.innerText = "❌ Error al subir. Revisa la consola (F12).";
+            }
         }
     </script>
 </body>
