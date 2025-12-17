@@ -7,17 +7,17 @@ const xlsx = require('xlsx');
 const fs = require('fs');
 const path = require('path');
 
-// --- 1. CONFIGURACIÓN ---
+// --- 1. PORT ---
 const PORT = 3000; 
 
-// 🔐 CREDENCIALES (Cámbialas)
+// 🔐 CREDENCIALES
 const USUARIO = "admin";
 const PASSWORD = "123"; 
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) { cb(null, 'uploads/') },
     filename: function (req, file, cb) {
-        // El nombre cambia con la fecha, así que no hay problema con el caché
+        // El nombre cambia con la fecha
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const ext = path.extname(file.originalname);
         cb(null, file.fieldname + '-' + uniqueSuffix + ext)
@@ -78,7 +78,6 @@ app.post('/publicar', portero, upload.single('archivo'), (req, res) => {
     }
 });
 
-// --- AQUÍ ESTÁ EL CAMBIO PARA EL VIDEO ---
 app.use(express.static('public')); 
 
 // immutable: true -> Le dice a la TV "Este archivo no va a cambiar, confía en mí".
