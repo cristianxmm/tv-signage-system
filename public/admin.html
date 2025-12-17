@@ -3,69 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Control TV</title>
+    <title>Admin TV</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
-        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        body { font-family: sans-serif; padding: 40px; background: #f0f2f5; display: flex; justify-content: center; }
+        .card { 
+            background: white; padding: 30px; width: 100%; max-width: 500px; 
+            border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; 
+        }
         h2 { margin-top: 0; color: #333; }
-        button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; }
+        select, input { padding: 12px; margin: 10px 0; width: 90%; border: 1px solid #ccc; border-radius: 5px; }
+        button { 
+            padding: 15px 30px; cursor: pointer; background: #007bff; color: white; 
+            border: none; border-radius: 5px; font-size: 16px; font-weight: bold; margin-top: 10px; width: 100%;
+        }
         button:hover { background: #0056b3; }
-        select, input { padding: 10px; margin-right: 10px; border-radius: 5px; border: 1px solid #ccc; }
-        .status { margin-top: 10px; font-weight: bold; color: green; }
+        .info { font-size: 0.9em; color: #666; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
-    <h1>🎛️ Torre de Control</h1>
-
     <div class="card">
-        <h2>🚀 Publicar Excel (KPIs)</h2>
-        <p>Sube un archivo .xlsx para mostrarlo en las pantallas.</p>
+        <h2>🎛️ Control de Pantallas</h2>
         
-        <label><strong>¿A quién enviar?</strong></label><br>
+        <label style="display:block; text-align:left; font-weight:bold;">1. Selecciona Destino:</label>
         <select id="destino">
-            <option value="all">🌍 A TODAS las pantallas</option>
+            <option value="all">🌍 TODAS LAS PANTALLAS</option>
             <option value="recepcion">🏢 Recepción</option>
-            <option value="almacen">📦 Almacén</option>
+            <option value="logistica">📦 Logística</option>
             <option value="ventas">💰 Ventas</option>
+            <option value="comedor">🍔 Comedor</option>
         </select>
-        <br><br>
-
-        <input type="file" id="excelFile" accept=".xlsx">
-        <button onclick="subirExcel()">SUBIR Y MOSTRAR</button>
         
-        <div id="mensaje" class="status"></div>
+        <label style="display:block; text-align:left; font-weight:bold;">2. Selecciona Archivo:</label>
+        <input type="file" id="archivo" accept=".xlsx, .jpg, .png, .jpeg, .mp4">
+        
+        <p class="info">Soporta: Excel (.xlsx), Fotos (.jpg/png), Videos (.mp4)</p>
+
+        <button onclick="enviar()">🚀 PUBLICAR AHORA</button>
+        
+        <p id="mensaje" style="margin-top: 20px; font-weight: bold;"></p>
     </div>
 
     <script>
-        async function subirExcel() {
-            const input = document.getElementById('excelFile');
+        async function enviar() {
+            const input = document.getElementById('archivo');
             const destino = document.getElementById('destino').value;
             const mensajeDiv = document.getElementById('mensaje');
 
             if(input.files.length === 0) {
-                alert("Selecciona un archivo primero");
+                alert("Falta seleccionar el archivo");
                 return;
             }
 
             const formData = new FormData();
             formData.append('archivo', input.files[0]);
-            formData.append('target', destino); // Enviamos el destino al servidor
+            formData.append('target', destino);
 
             mensajeDiv.innerText = "⏳ Subiendo...";
+            mensajeDiv.style.color = "orange";
 
             try {
-                const response = await fetch('/subir-excel', {
-                    method: 'POST',
-                    body: formData
-                });
+                const response = await fetch('/publicar', { method: 'POST', body: formData });
+                const resultado = await response.json();
                 
-                const resultado = await response.json(); // Ahora esperamos un JSON
-                console.log(resultado);
-                mensajeDiv.innerText = "✅ ¡Listo! Enviado a: " + destino;
+                mensajeDiv.innerText = "✅ Enviado correctamente a: " + destino;
+                mensajeDiv.style.color = "green";
             } catch (error) {
                 console.error(error);
-                mensajeDiv.innerText = "❌ Error al subir";
+                mensajeDiv.innerText = "❌ Error en el servidor";
+                mensajeDiv.style.color = "red";
             }
         }
     </script>
