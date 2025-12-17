@@ -2,76 +2,66 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin TV</title>
+    <title>Panel de Control TV</title>
     <style>
-        body { font-family: sans-serif; padding: 40px; background: #f0f2f5; display: flex; justify-content: center; }
-        .card { 
-            background: white; padding: 30px; width: 100%; max-width: 500px; 
-            border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; 
-        }
-        h2 { margin-top: 0; color: #333; }
-        select, input { padding: 12px; margin: 10px 0; width: 90%; border: 1px solid #ccc; border-radius: 5px; }
-        button { 
-            padding: 15px 30px; cursor: pointer; background: #007bff; color: white; 
-            border: none; border-radius: 5px; font-size: 16px; font-weight: bold; margin-top: 10px; width: 100%;
-        }
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+        .card { background: white; padding: 20px; border-radius: 8px; max-width: 500px; margin: 0 auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        input, select, button { width: 100%; margin-bottom: 15px; padding: 10px; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; }
         button:hover { background: #0056b3; }
-        .info { font-size: 0.9em; color: #666; margin-bottom: 20px; }
     </style>
 </head>
 <body>
-
     <div class="card">
-        <h2>🎛️ Control de Pantallas</h2>
+        <h2>📡 Control de Pantallas</h2>
         
-        <label style="display:block; text-align:left; font-weight:bold;">1. Selecciona Destino:</label>
-        <select id="destino">
-            <option value="all">🌍 TODAS LAS PANTALLAS</option>
-            <option value="recepcion">🏢 Recepción</option>
-            <option value="logistica">📦 Logística</option>
-            <option value="ventas">💰 Ventas</option>
-            <option value="comedor">🍔 Comedor</option>
+        <label>Selecciona Pantalla:</label>
+        <select id="target">
+            <option value="all">Todas las Pantallas</option>
+            <option value="recepcion">Recepción</option>
+            <option value="logistica">Logística</option>
         </select>
-        
-        <label style="display:block; text-align:left; font-weight:bold;">2. Selecciona Archivo:</label>
-        <input type="file" id="archivo" accept=".xlsx, .jpg, .png, .jpeg, .mp4">
-        
-        <p class="info">Soporta: Excel (.xlsx), Fotos (.jpg/png), Videos (.mp4)</p>
 
-        <button onclick="enviar()">🚀 PUBLICAR AHORA</button>
-        
-        <p id="mensaje" style="margin-top: 20px; font-weight: bold;"></p>
+        <label>Subir Archivo(s):</label>
+        <input type="file" id="archivo" multiple>
+
+        <button onclick="enviar()">Publicar Contenido</button>
+        <p id="status"></p>
     </div>
 
     <script>
         async function enviar() {
             const input = document.getElementById('archivo');
-            const destino = document.getElementById('destino').value;
-            const mensajeDiv = document.getElementById('mensaje');
+            const target = document.getElementById('target').value;
+            const status = document.getElementById('status');
 
-            if(input.files.length === 0) {
-                alert("Falta seleccionar el archivo");
-                return;
-            }
+            if (input.files.length === 0) return alert("Selecciona algo primero");
 
             const formData = new FormData();
-            formData.append('archivo', input.files[0]);
-            formData.append('target', destino);
+            formData.append('target', target);
+            
+            // Agregamos todos los archivos seleccionados
+            for (let i = 0; i < input.files.length; i++) {
+                formData.append('archivos', input.files[i]);
+            }
 
-            mensajeDiv.innerText = "⏳ Subiendo...";
-            mensajeDiv.style.color = "orange";
+            status.innerText = "⏳ Enviando...";
 
             try {
-                const response = await fetch('/publicar', { method: 'POST', body: formData });
-                const resultado = await response.json();
+                const res = await fetch('/publicar', {
+                    method: 'POST',
+                    body: formData,
+                    // AGREGAMOS ESTO para la autenticación básica
+                    headers: {
+                        'Authorization': 'Basic ' + btoa('admin:123') // ⚠️ Usa tu usuario:pass real
+                    }
+                });
                 
-                mensajeDiv.innerText = "✅ Enviado correctamente a: " + destino;
-                mensajeDiv.style.color = "green";
-            } catch (error) {
-                console.error(error);
-                mensajeDiv.innerText = "❌ Error en el servidor";
-                mensajeDiv.style.color = "red";
+                if (res.ok) status.innerText = "✅ ¡Enviado con éxito!";
+                else status.innerText = "❌ Error al enviar.";
+            } catch (e) {
+                console.error(e);
+                status.innerText = "❌ Error de conexión.";
             }
         }
     </script>

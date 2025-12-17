@@ -4,171 +4,171 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pantalla TV</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+    
     <style>
         body {
             background-color: #000;
             color: #fff;
-            font-family: 'Segoe UI', sans-serif;
             margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
             overflow: hidden;
+            font-family: sans-serif;
         }
 
-        .view-section {
-            display: none; 
-            width: 100%;
-            height: 100%;
-        }
+        .view-section { display: none; width: 100vw; height: 100vh; }
 
-        /* --- TABLA --- */
-        #vista-tabla { padding: 20px; box-sizing: border-box; overflow: auto; text-align: center; }
-        table {
-            width: 95%;
-            margin: 20px auto;
-            border-collapse: collapse;
-            font-size: 2em; 
-            background-color: #1a1a1a;
-        }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #444; }
-        th { background-color: #333; color: #00d2ff; }
-        tr:nth-child(even) { background-color: #222; }
-
-        /* --- MULTIMEDIA --- */
-        #vista-imagen, #vista-video {
-            display: none;
-            align-items: center;
-            justify-content: center;
+        /* --- ESTILOS DE GALERÍA (SWIPER) --- */
+        #vista-galeria { width: 100%; height: 100%; }
+        .swiper { width: 100%; height: 100%; }
+        
+        .swiper-slide {
+            text-align: center;
             background: #000;
-            width: 100vw;
-            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
-        img {
-            max-width: 100%;
-            max-height: 100vh;
-            object-fit: contain; 
-        }
-
-        /* AJUSTE PARA VIDEO FULLSCREEN */
-        video {
+        .swiper-slide img {
+            display: block;
             width: 100%;
             height: 100%;
-            object-fit: contain; /* Usa 'cover' si quieres que llene todo sin bordes negros, pero cortará imagen */
+            object-fit: contain; /* Ajusta la imagen sin cortarla */
         }
+
+        /* --- OTROS ESTILOS --- */
+        #vista-tabla { overflow: auto; padding: 20px; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; font-size: 1.5em; }
+        th, td { padding: 10px; border: 1px solid #444; }
+        th { background: #333; color: cyan; }
+
+        #vista-video video { width: 100%; height: 100%; object-fit: contain; }
 
         #id-pantalla {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            font-size: 14px;
-            color: rgba(255,255,255,0.4);
-            background: rgba(0,0,0,0.6);
-            padding: 4px 8px;
-            border-radius: 4px;
-            z-index: 1000;
+            position: absolute; bottom: 10px; right: 10px; z-index: 100;
+            background: rgba(0,0,0,0.5); padding: 5px; border-radius: 4px;
         }
     </style>
 </head>
 <body>
 
-    <div id="vista-tabla" class="view-section">
-        <h1 style="color: #00d2ff; margin-top:0;">Reporte Actualizado</h1>
-        <div id="tabla-contenido"></div>
-    </div>
-
-    <div id="vista-imagen" class="view-section">
-        <img id="img-display" src="" alt="Imagen">
+    <div id="vista-galeria" class="view-section">
+        <div class="swiper mySwiper">
+            <div class="swiper-wrapper" id="galeria-contenido">
+                </div>
+            <div class="swiper-button-next"></div>
+            <div class="swiper-button-prev"></div>
+            <div class="swiper-pagination"></div>
+        </div>
     </div>
 
     <div id="vista-video" class="view-section">
-        <video id="video-display" autoplay muted loop playsinline>
-            <source src="" type="video/mp4">
-        </video>
+        <video id="video-display" autoplay muted loop playsinline><source src="" type="video/mp4"></video>
     </div>
 
-    <div id="vista-espera" class="view-section" style="display:flex; flex-direction:column; justify-content:center; align-items:center;">
-        <h1>Esperando contenido...</h1>
+    <div id="vista-tabla" class="view-section">
+        <div id="tabla-contenido"></div>
+    </div>
+    
+    <div id="vista-imagen" class="view-section" style="display:flex; justify-content:center; align-items:center;">
+        <img id="img-display" src="" style="max-width:100%; max-height:100%;">
     </div>
 
-    <div id="id-pantalla">Conectando...</div>
+    <div id="id-pantalla">Cargando...</div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    
     <script>
         const socket = io();
         const params = new URLSearchParams(window.location.search);
         const myId = params.get('id') || 'general';
-        
         document.getElementById('id-pantalla').innerText = `ID: ${myId}`;
         socket.emit('join', myId);
 
-        // --- LÓGICA DE VIDEO ROBUSTA ---
-        const videoElement = document.getElementById('video-display');
-
-        // Seguro de vida: Si el video termina, fuérzalo a reproducir de nuevo
-        videoElement.addEventListener('ended', () => {
-            videoElement.currentTime = 0;
-            videoElement.play();
-        });
+        let swiper; // Variable para guardar la instancia del carrusel
 
         socket.on('contentUpdate', (payload) => {
             if(payload.target !== 'all' && payload.target !== myId) return;
 
-            console.log('Recibido:', payload.type);
             ocultarTodo();
 
-            if (payload.type === 'table') {
+            // --- MODO GALERÍA (MÚLTIPLES FOTOS) ---
+            if (payload.type === 'gallery') {
+                const wrapper = document.getElementById('galeria-contenido');
+                wrapper.innerHTML = ''; // Limpiar fotos viejas
+
+                // Crear los slides
+                payload.urls.forEach(url => {
+                    const slide = document.createElement('div');
+                    slide.className = 'swiper-slide';
+                    slide.innerHTML = `<img src="${url}" />`;
+                    wrapper.appendChild(slide);
+                });
+
+                document.getElementById('vista-galeria').style.display = 'block';
+
+                // Inicializar (o reiniciar) Swiper
+                if (swiper) swiper.destroy(true, true); // Destruir anterior para evitar bugs
+                
+                swiper = new Swiper(".mySwiper", {
+                    spaceBetween: 30,
+                    effect: "fade", // Efecto desvanecer (puedes quitarlo si prefieres slide normal)
+                    grabCursor: true, // Manita para agarrar
+                    loop: true, // Infinito
+                    navigation: {
+                        nextEl: ".swiper-button-next",
+                        prevEl: ".swiper-button-prev",
+                    },
+                    pagination: {
+                        el: ".swiper-pagination",
+                        clickable: true,
+                    },
+                    autoplay: {
+                        delay: 5000, // Cambia sola cada 5 segundos (si no la tocas)
+                        disableOnInteraction: false,
+                    },
+                });
+            } 
+            // --- MODO VIDEO ---
+            else if (payload.type === 'video') {
+                const v = document.getElementById('video-display');
+                v.src = payload.url;
+                document.getElementById('vista-video').style.display = 'block';
+                v.play().catch(e=>console.log("Error play video"));
+            }
+            // --- MODO TABLA ---
+            else if (payload.type === 'table') {
                 renderTable(payload.data);
                 document.getElementById('vista-tabla').style.display = 'block';
-            } 
+            }
+            // --- MODO IMAGEN ÚNICA ---
             else if (payload.type === 'image') {
                 document.getElementById('img-display').src = payload.url;
                 document.getElementById('vista-imagen').style.display = 'flex';
-            }
-            else if (payload.type === 'video') {
-                videoElement.src = payload.url;
-                document.getElementById('vista-video').style.display = 'flex';
-                
-                // Promesa para asegurar reproducción
-                var playPromise = videoElement.play();
-                if (playPromise !== undefined) {
-                    playPromise.then(_ => {
-                        // Reproducción automática comenzó
-                    })
-                    .catch(error => {
-                        console.log("El navegador bloqueó el autoplay. Asegúrate de interactuar con la página primero.");
-                    });
-                }
             }
         });
 
         function ocultarTodo() {
             document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
-            // Pausar video anterior para liberar memoria
-            videoElement.pause();
+            document.getElementById('video-display').pause();
         }
 
         function renderTable(data) {
-            if(!data || data.length === 0) return;
-            const contenedor = document.getElementById('tabla-contenido');
-            let html = '<table><thead><tr>';
-            const headers = Object.keys(data[0]);
-            headers.forEach(h => html += `<th>${h}</th>`);
-            html += '</tr></thead><tbody>';
-            data.forEach(row => {
-                html += '<tr>';
-                headers.forEach(h => html += `<td>${row[h]}</td>`);
-                html += '</tr>';
+            // (Tu código de tabla anterior va aquí...)
+            const c = document.getElementById('tabla-contenido');
+            let h = '<table><thead><tr>';
+            Object.keys(data[0]).forEach(k => h+=`<th>${k}</th>`);
+            h+='</tr></thead><tbody>';
+            data.forEach(r => {
+                h+='<tr>';
+                Object.values(r).forEach(v => h+=`<td>${v}</td>`);
+                h+='</tr>';
             });
-            html += '</tbody></table>';
-            contenedor.innerHTML = html;
+            h+='</tbody></table>';
+            c.innerHTML = h;
         }
-
-        document.getElementById('vista-espera').style.display = 'flex';
     </script>
 </body>
 </html>
