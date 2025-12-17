@@ -7,16 +7,17 @@ const xlsx = require('xlsx');
 const fs = require('fs');
 const path = require('path');
 
-// --- CONFIGURACIÓN ---
-const PORT = 3000; // <--- CAMBIO REALIZADO AQUÍ
+// --- 1. CONFIGURACIÓN ---
+const PORT = 3000; 
 
-// Configuración para guardar archivos manteniendo su extensión
+// 🔐 CREDENCIALES (Cámbialas)
+const USUARIO = "admin";
+const PASSWORD = "123"; 
+
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/')
-    },
+    destination: function (req, file, cb) { cb(null, 'uploads/') },
     filename: function (req, file, cb) {
-        // Evitar nombres duplicados usando la fecha
+        // El nombre cambia con la fecha, así que no hay problema con el caché
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const ext = path.extname(file.originalname);
         cb(null, file.fieldname + '-' + uniqueSuffix + ext)
@@ -24,71 +25,75 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-app.use(express.static('public'));
-// Permitir acceso a la carpeta uploads para que la TV vea las fotos/videos
-app.use('/uploads', express.static('uploads')); 
+// --- 2. MIDDLEWARE DE SEGURIDAD ---
+const portero = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        res.setHeader('WWW-Authenticate', 'Basic');
+        return res.status(401).send('🔒 Acceso Denegado');
+    }
+    const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+    if (auth[0] === USUARIO && auth[1] === PASSWORD) {
+        next(); 
+    } else {
+        res.setHeader('WWW-Authenticate', 'Basic');
+        return res.status(401).send('❌ Contraseña incorrecta');
+    }
+};
 
-// Crear carpeta uploads si no existe
-if (!fs.existsSync('uploads')){
-    fs.mkdirSync('uploads');
-}
+// --- 3. RUTAS ---
 
-// --- RUTAS ---
+// Panel Admin Protegido
+app.get('/admin.html', portero, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public/admin.html'));
+});
 
-app.post('/publicar', upload.single('archivo'), (req, res) => {
+// Subida de Archivos Protegida
+app.post('/publicar', portero, upload.single('archivo'), (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).send('No se subió ningún archivo.');
-        }
-
-        const target = req.body.target || 'all';
-        const mimeType = req.file.mimetype;
-        const filePath = `/uploads/${req.file.filename}`; 
-
-        console.log(`📡 Enviando contenido a: ${target} | Tipo: ${mimeType}`);
-
-        // DETECTAR TIPO DE ARCHIVO
+        if (!req.file) return res.status(400).send('Falta archivo');
         
-        // 1. EXCEL
-        if (req.file.originalname.endsWith('.xlsx') || mimeType.includes('spreadsheet') || mimeType.includes('excel')) {
-            const workbook = xlsx.readFile(req.file.path);
-            const sheetName = workbook.SheetNames[0];
-            const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
-            
+        const target = req.body.target || 'all';
+        const mime = req.file.mimetype;
+        const filePath = `/uploads/${req.file.filename}`;
+
+        console.log(`📡 Enviando a: ${target}`);
+
+        if (req.file.originalname.endsWith('.xlsx') || mime.includes('spreadsheet')) {
+            const wb = xlsx.readFile(req.file.path);
+            const data = xlsx.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
             io.emit('contentUpdate', { target, type: 'table', data: data });
         } 
-        // 2. IMAGEN
-        else if (mimeType.includes('image')) {
+        else if (mime.includes('image')) {
             io.emit('contentUpdate', { target, type: 'image', url: filePath });
         }
-        // 3. VIDEO
-        else if (mimeType.includes('video')) {
+        else if (mime.includes('video')) {
             io.emit('contentUpdate', { target, type: 'video', url: filePath });
         }
-        else {
-            return res.status(400).send('Formato no soportado. Usa .xlsx, .jpg, .png o .mp4');
-        }
-
-        res.send({ status: 'ok', message: 'Contenido enviado a ' + target });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Error procesando el archivo');
+        
+        res.send({ status: 'ok', message: 'Enviado' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).send('Error');
     }
 });
 
-// --- SOCKET.IO ---
+// --- AQUÍ ESTÁ EL CAMBIO PARA EL VIDEO ---
+app.use(express.static('public')); 
+
+// immutable: true -> Le dice a la TV "Este archivo no va a cambiar, confía en mí".
+app.use('/uploads', express.static('uploads', { 
+    maxAge: '30d', 
+    immutable: true 
+})); 
+
+if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
+
+// --- 4. SOCKET ---
 io.on('connection', (socket) => {
-    console.log('⚡ Nueva TV Conectada');
-    
-    // Unir la TV a su sala correspondiente (ej: "recepcion")
-    socket.on('join', (room) => {
-        socket.join(room);
-        console.log(`📺 TV se unió al canal: ${room}`);
-    });
+    socket.on('join', (room) => socket.join(room));
 });
 
-// --- INICIO ---
 http.listen(PORT, () => {
-    console.log(`🚀 Servidor Multimedia corriendo en http://localhost:${PORT}`);
+    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
