@@ -2,13 +2,13 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
-const multer = require('multer'); // Necesario instalar: npm install multer
+const multer = require('multer');
 const xlsx = require('xlsx');
 const fs = require('fs');
 const path = require('path');
 
 // --- CONFIGURACIÓN ---
-const PORT = 80; 
+const PORT = 3000; // <--- CAMBIO REALIZADO AQUÍ
 
 // Configuración para guardar archivos manteniendo su extensión
 const storage = multer.diskStorage({
@@ -84,11 +84,4 @@ io.on('connection', (socket) => {
     // Unir la TV a su sala correspondiente (ej: "recepcion")
     socket.on('join', (room) => {
         socket.join(room);
-        console.log(`📺 TV se unió al canal: ${room}`);
-    });
-});
-
-// --- INICIO ---
-http.listen(PORT, () => {
-    console.log(`🚀 Servidor Multimedia corriendo en http://localhost:${PORT}`);
-});
+        console.log(`📺 TV se unió al canal
