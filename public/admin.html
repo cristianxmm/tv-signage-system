@@ -3,139 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Torre de Control TV</title>
+    <title>Panel de Control TV</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; background-color: #f4f4f9; color: #333; }
-        h1 { text-align: center; color: #2c3e50; }
-        
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .card h2 { margin-top: 0; font-size: 1.2rem; color: #555; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        
-        label { display: block; margin-top: 10px; font-weight: bold; }
-        input[type="text"], input[type="file"] { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-        
-        button { cursor: pointer; border: none; padding: 12px 20px; border-radius: 5px; font-size: 1rem; transition: background 0.3s; margin-top: 10px; }
-        .btn-primary { background-color: #007bff; color: white; width: 100%; }
-        .btn-primary:hover { background-color: #0056b3; }
-        
-        .btn-success { background-color: #28a745; color: white; width: 100%; }
-        .btn-success:hover { background-color: #218838; }
-
-        .presets { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
-        .btn-preset { background-color: #6c757d; color: white; }
-        .btn-preset:hover { background-color: #5a6268; }
-
-        #uploadStatus { margin-top: 10px; color: #666; font-style: italic; }
-        
-        .tip { font-size: 0.85rem; color: #888; margin-top: 5px; }
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; color: #333; }
+        button { padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; }
+        button:hover { background: #0056b3; }
+        select, input { padding: 10px; margin-right: 10px; border-radius: 5px; border: 1px solid #ccc; }
+        .status { margin-top: 10px; font-weight: bold; color: green; }
     </style>
 </head>
 <body>
 
-    <h1>📡 Torre de Control</h1>
+    <h1>🎛️ Torre de Control</h1>
 
     <div class="card">
-        <h2>1. Configuración de Envío</h2>
+        <h2>🚀 Publicar Excel (KPIs)</h2>
+        <p>Sube un archivo .xlsx para mostrarlo en las pantallas.</p>
         
-        <label>🎯 ¿A quién enviar?</label>
-        <div class="tip">Escribe "all" para todas, o el nombre de la sala (ej: "ventas", "recepcion").</div>
-        <input type="text" id="targetInput" value="all" placeholder="Nombre de la sala...">
+        <label><strong>¿A quién enviar?</strong></label><br>
+        <select id="destino">
+            <option value="all">🌍 A TODAS las pantallas</option>
+            <option value="recepcion">🏢 Recepción</option>
+            <option value="almacen">📦 Almacén</option>
+            <option value="ventas">💰 Ventas</option>
+        </select>
+        <br><br>
 
-        <label>🔗 URL a mostrar</label>
-        <input type="text" id="urlInput" placeholder="https://...">
+        <input type="file" id="excelFile" accept=".xlsx">
+        <button onclick="subirExcel()">SUBIR Y MOSTRAR</button>
         
-        <button class="btn-primary" onclick="sendCommand()">ENVIAR SEÑAL</button>
+        <div id="mensaje" class="status"></div>
     </div>
 
-    <div class="card">
-        <h2>2. Publicar Excel (KPIs)</h2>
-        <div class="tip">Sube un archivo .xlsx y se mostrará automáticamente en las TVs seleccionadas arriba.</div>
-        
-        <input type="file" id="excelInput" accept=".xlsx, .xls">
-        <button class="btn-success" onclick="subirExcel()">SUBIR Y MOSTRAR</button>
-        <p id="uploadStatus"></p>
-    </div>
-
-    <div class="card">
-        <h2>3. Accesos Rápidos</h2>
-        <div class="presets">
-            <button class="btn-preset" onclick="setAndSend('about:blank')">⚫ Pantalla Negra</button>
-            <button class="btn-preset" onclick="setAndSend('https://es.wikipedia.org/wiki/Naturaleza')">🌍 Wikipedia</button>
-            <button class="btn-preset" onclick="setAndSend('https://www.bing.com')">🔍 Bing</button>
-            </div>
-    </div>
-
-    <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
-
-        // Función auxiliar para los botones de presets
-        function setAndSend(url) {
-            document.getElementById('urlInput').value = url;
-            sendCommand();
-        }
-
-        // Función principal para enviar URL
-        function sendCommand() {
-            const url = document.getElementById('urlInput').value;
-            const target = document.getElementById('targetInput').value;
-
-            if(!url || !target) return alert("Falta la URL o el Destino");
-            
-            socket.emit('admin_command', {
-                target: target,
-                url: url
-            });
-            
-            // Efecto visual simple para saber que se envió
-            const btn = document.querySelector('.btn-primary');
-            const originalText = btn.innerText;
-            btn.innerText = "¡ENVIADO! 🚀";
-            setTimeout(() => btn.innerText = originalText, 1000);
-        }
-
-        // Función para subir Excel
         async function subirExcel() {
-            const input = document.getElementById('excelInput');
-            const status = document.getElementById('uploadStatus');
-            const target = document.getElementById('targetInput').value;
-            
-            if(input.files.length === 0) return alert("Selecciona un archivo Excel primero");
+            const input = document.getElementById('excelFile');
+            const destino = document.getElementById('destino').value;
+            const mensajeDiv = document.getElementById('mensaje');
+
+            if(input.files.length === 0) {
+                alert("Selecciona un archivo primero");
+                return;
+            }
 
             const formData = new FormData();
             formData.append('archivo', input.files[0]);
+            formData.append('target', destino); // Enviamos el destino al servidor
 
-            status.innerText = "⏳ Procesando archivo...";
+            mensajeDiv.innerText = "⏳ Subiendo...";
 
             try {
-                // Hacemos el POST al servidor
                 const response = await fetch('/subir-excel', {
                     method: 'POST',
                     body: formData
                 });
-
-                const data = await response.json();
-
-                if (data.url) {
-                    status.innerText = "✅ ¡Listo! Enviando a pantallas...";
-                    
-                    // Construimos la URL completa (http://localhost:3000/datos.html)
-                    const fullUrl = window.location.origin + data.url;
-                    
-                    // Rellenamos el input de URL para que el usuario vea qué está pasando
-                    document.getElementById('urlInput').value = fullUrl;
-                    
-                    // Enviamos la orden automáticamente
-                    socket.emit('admin_command', {
-                        target: target, 
-                        url: fullUrl 
-                    });
-                } else {
-                    status.innerText = "⚠️ Error: El servidor no devolvió una URL.";
-                }
-            } catch (err) {
-                console.error(err);
-                status.innerText = "❌ Error al subir. Revisa la consola (F12).";
+                
+                const resultado = await response.json(); // Ahora esperamos un JSON
+                console.log(resultado);
+                mensajeDiv.innerText = "✅ ¡Listo! Enviado a: " + destino;
+            } catch (error) {
+                console.error(error);
+                mensajeDiv.innerText = "❌ Error al subir";
             }
         }
     </script>

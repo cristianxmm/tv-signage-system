@@ -2,116 +2,84 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
+const multer = require('multer');
+const xlsx = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 
-// --- NUEVAS LIBRERÍAS ---
-const multer = require('multer');
-const XLSX = require('xlsx');
+// --- CONFIGURACIÓN ---
+// Usamos puerto 80 para facilitar acceso a TVs (requiere sudo)
+const PORT = 80; 
 
-// Configuración de subida de archivos
-const upload = multer({ dest: 'uploads/' });
+// Configurar Multer (Carga de archivos)
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/')
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.originalname)
+    }
+});
+const upload = multer({ storage: storage });
 
-// Servir la carpeta pública (SOLO UNA VEZ)
-app.use(express.static(path.join(__dirname, 'public')));
+// Servir archivos estáticos (HTML, CSS, JS)
+app.use(express.static('public'));
 
-// --- RUTA: PROCESAR EXCEL ---
+// Crear carpeta uploads si no existe
+if (!fs.existsSync('uploads')){
+    fs.mkdirSync('uploads');
+}
+
+// --- RUTAS ---
+
+// 1. Ruta para subir Excel
 app.post('/subir-excel', upload.single('archivo'), (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).send('No se subió ningún archivo');
+            return res.status(400).send('No se subió ningún archivo.');
         }
 
-        // 1. Leer el archivo Excel
-        const workbook = XLSX.readFile(req.file.path);
+        // Leer el archivo Excel
+        const workbook = xlsx.readFile(req.file.path);
         const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
+        const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-        // 2. Convertir a HTML
-        const tablaHTML = XLSX.utils.sheet_to_html(sheet);
+        // Ver a quién se lo enviamos (viene del Admin)
+        const target = req.body.target || 'all'; // 'all', 'recepcion', 'almacen', etc.
 
-        // 3. Crear HTML con estilos oscuros
-        const htmlFinal = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <style>
-                    body { background: #1a1a1a; color: white; font-family: sans-serif; padding: 20px; display: flex; justify-content: center; }
-                    table { border-collapse: collapse; width: 90%; background: #333; box-shadow: 0 0 20px rgba(0,0,0,0.5); margin-top: 20px; }
-                    th, td { padding: 15px; text-align: left; border-bottom: 1px solid #555; font-size: 1.2rem; }
-                    tr:hover { background-color: #444; }
-                    th { background-color: #007bff; color: white; font-weight: bold; font-size: 1.5rem; }
-                </style>
-                <script src="/socket.io/socket.io.js"></script>
-                <script>
-                   const socket = io();
-                   // Recuperar nombre de la URL si existe para reconectarse a su sala
-                   const params = new URLSearchParams(window.location.search);
-                   const nombreTV = params.get('nombre') || 'sin-nombre';
-                   
-                   socket.on('connect', () => {
-                       socket.emit('registro_tv', nombreTV);
-                   });
+        console.log(`📡 Enviando Excel a: ${target}`);
 
-                   // Escuchar cambios para salir del modo Excel si el admin manda otra cosa
-                   socket.on('update_screen', (url) => {
-                       // Mantenemos el nombre de la TV en la URL al cambiar
-                       if(url.includes('?')) window.location.href = url;
-                       else window.location.href = url + '?nombre=' + nombreTV;
-                   });
-                </script>
-            </head>
-            <body>
-                ${tablaHTML}
-            </body>
-            </html>
-        `;
+        // Enviar datos vía Socket.io
+        if (target === 'all') {
+            io.emit('excelData', data); // A todos
+        } else {
+            io.to(target).emit('excelData', data); // A una sala específica
+        }
 
-        // 4. Guardar archivo
-        const rutaSalida = path.join(__dirname, 'public', 'datos.html');
-        fs.writeFileSync(rutaSalida, htmlFinal);
-
-        // Borrar temporal
-        fs.unlinkSync(req.file.path);
-
-        res.json({ url: '/datos.html', message: '¡Excel convertido con éxito!' });
+        res.send({ status: 'ok', message: 'Enviado correctamente a ' + target });
 
     } catch (error) {
         console.error(error);
-        res.status(500).send('Error al procesar el Excel');
+        res.status(500).send('Error procesando el archivo');
     }
 });
 
-// --- MANEJO DE CONEXIONES (SOCKET.IO) ---
+// --- SOCKET.IO (CONEXIONES EN TIEMPO REAL) ---
 io.on('connection', (socket) => {
-    console.log('Dispositivo conectado:', socket.id);
+    console.log('⚡ Nuevo cliente conectado');
 
-    // 1. Escuchar cuando una TV dice "Soy Ventas"
-    socket.on('registro_tv', (nombreTV) => {
-        socket.join(nombreTV);
-        console.log(`Socket ${socket.id} unido a sala: ${nombreTV}`);
-    });
-
-    // 2. Escuchar orden del Admin
-    socket.on('admin_command', (data) => {
-        const { target, url } = data;
-        console.log(`Orden para ${target}: ${url}`);
-        
-        if(target === 'all') {
-            io.emit('update_screen', url);
-        } else {
-            // Enviar SOLO a la sala específica
-            io.to(target).emit('update_screen', url);
-        }
+    // El cliente nos dice quién es (ej: "recepcion")
+    socket.on('join', (room) => {
+        console.log(`📺 Pantalla se unió a la sala: ${room}`);
+        socket.join(room); // Unimos este socket a esa sala
     });
 
     socket.on('disconnect', () => {
-        console.log('Dispositivo desconectado');
+        console.log('🔴 Cliente desconectado');
     });
 });
 
-const PORT = process.env.PORT || 80;
+// --- ARRANCAR SERVIDOR ---
 http.listen(PORT, () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
