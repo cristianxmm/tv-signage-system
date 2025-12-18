@@ -2,68 +2,258 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel de Control TV</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control - Pantallas</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
-        .card { background: white; padding: 20px; border-radius: 8px; max-width: 500px; margin: 0 auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        input, select, button { width: 100%; margin-bottom: 15px; padding: 10px; }
-        button { background: #007bff; color: white; border: none; cursor: pointer; }
-        button:hover { background: #0056b3; }
+        :root {
+            --primary: #0056b3; /* Azul Corporativo */
+            --bg: #f4f7f6;
+            --card-bg: #ffffff;
+            --text: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: var(--text);
+        }
+
+        /* --- TARJETAS (LOGIN Y DASHBOARD) --- */
+        .card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            transition: all 0.3s ease;
+        }
+
+        .hidden { display: none !important; }
+
+        h2 { margin-top: 0; color: var(--primary); text-align: center; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; }
+        
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        button:hover { background-color: #004494; }
+        button.secondary { background-color: #6c757d; margin-top: 10px; }
+
+        /* Status Bar */
+        #status-msg { text-align: center; margin-top: 10px; font-size: 0.9rem; min-height: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+
+        /* --- DASHBOARD SPECIFIC --- */
+        #dashboard-view { max-width: 500px; }
+        .file-upload-wrapper {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            background: #fafafa;
+        }
+        .timer { font-size: 0.8rem; color: #999; text-align: center; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>📡 Control de Pantallas</h2>
+
+    <div id="login-view" class="card">
+        <h2>🔒 Acceso Seguro</h2>
+        <p style="text-align:center; color:#666; font-size:0.9rem;">Sistema de Gestión de Pantallas</p>
         
-        <label>Selecciona Pantalla:</label>
-        <select id="target">
-            <option value="all">Todas las Pantallas</option>
+        <label>Usuario</label>
+        <input type="text" id="user" placeholder="Ej. admin">
+        
+        <label>Contraseña</label>
+        <input type="password" id="pass" placeholder="••••••">
+        
+        <button onclick="login()">Iniciar Sesión</button>
+        <div id="login-error" class="error" style="text-align:center; margin-top:10px;"></div>
+    </div>
+
+    <div id="dashboard-view" class="card hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="margin:0;">🎛️ Control</h2>
+            <button onclick="logout()" style="width:auto; padding: 5px 15px; font-size:0.8rem; background:#d9534f;">Salir</button>
+        </div>
+
+        <label>Seleccionar Pantalla Destino:</label>
+        <select id="targetSelect">
+            <option value="all">📡 TODAS LAS PANTALLAS</option>
             <option value="recepcion">Recepción</option>
             <option value="logistica">Logística</option>
+            <option value="ventas">Ventas</option>
+            <option value="almacen">Almacén</option>
         </select>
 
-        <label>Subir Archivo(s):</label>
-        <input type="file" id="archivo" multiple>
+        <label>Subir Contenido (Imagen o Video):</label>
+        <div class="file-upload-wrapper">
+            <input type="file" id="fileInput" multiple accept="image/*,video/*">
+            <small style="color:#666">Soporta JPG, PNG, MP4</small>
+        </div>
 
-        <button onclick="enviar()">Publicar Contenido</button>
-        <p id="status"></p>
+        <button onclick="publicar()">🚀 Enviar a Pantallas</button>
+        
+        <div id="status-msg"></div>
+        <div class="timer">Sesión expira por inactividad en: <span id="timer-count">5:00</span></div>
     </div>
 
     <script>
-        async function enviar() {
-            const input = document.getElementById('archivo');
-            const target = document.getElementById('target').value;
-            const status = document.getElementById('status');
+        // --- CONFIGURACIÓN DE SEGURIDAD ---
+        const INACTIVITY_LIMIT_MS = 5 * 60 * 1000; // 5 Minutos
+        let authToken = null;
+        let inactivityTimer;
+        let countdownInterval;
 
-            if (input.files.length === 0) return alert("Selecciona algo primero");
+        // 1. FUNCIONES DE LOGIN
+        async function login() {
+            const u = document.getElementById('user').value;
+            const p = document.getElementById('pass').value;
+            const errorDiv = document.getElementById('login-error');
+
+            // Creamos el token manualmente (Base64)
+            const token = 'Basic ' + btoa(u + ':' + p);
+
+            try {
+                // Probamos credenciales contra el servidor
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Authorization': token }
+                });
+
+                if (res.ok) {
+                    authToken = token;
+                    mostrarDashboard();
+                    errorDiv.innerText = "";
+                } else {
+                    errorDiv.innerText = "Usuario o contraseña incorrectos";
+                }
+            } catch (e) {
+                errorDiv.innerText = "Error de conexión con el servidor";
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            document.getElementById('user').value = '';
+            document.getElementById('pass').value = '';
+            document.getElementById('login-view').classList.remove('hidden');
+            document.getElementById('dashboard-view').classList.add('hidden');
+            stopTimers();
+        }
+
+        // 2. GESTIÓN DEL DASHBOARD
+        function mostrarDashboard() {
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('dashboard-view').classList.remove('hidden');
+            resetInactivityTimer();
+        }
+
+        async function publicar() {
+            const input = document.getElementById('fileInput');
+            const target = document.getElementById('targetSelect').value;
+            const status = document.getElementById('status-msg');
+
+            if (input.files.length === 0) {
+                status.innerText = "⚠️ Selecciona un archivo primero";
+                status.className = "error";
+                return;
+            }
 
             const formData = new FormData();
             formData.append('target', target);
-            
-            // Agregamos todos los archivos seleccionados
             for (let i = 0; i < input.files.length; i++) {
                 formData.append('archivos', input.files[i]);
             }
 
-            status.innerText = "⏳ Enviando...";
+            status.innerText = "⏳ Subiendo...";
+            status.className = "";
 
             try {
                 const res = await fetch('/publicar', {
                     method: 'POST',
-                    body: formData,
-                    // AGREGAMOS ESTO para la autenticación básica
-                    headers: {
-                        'Authorization': 'Basic ' + btoa('admin:123') // ⚠️ Usa tu usuario:pass real
-                    }
+                    headers: { 'Authorization': authToken }, // ¡Enviamos la llave!
+                    body: formData
                 });
-                
-                if (res.ok) status.innerText = "✅ ¡Enviado con éxito!";
-                else status.innerText = "❌ Error al enviar.";
+
+                if (res.ok) {
+                    status.innerText = "✅ ¡Enviado correctamente!";
+                    status.className = "success";
+                    input.value = ""; // Limpiar input
+                } else {
+                    throw new Error();
+                }
             } catch (e) {
-                console.error(e);
-                status.innerText = "❌ Error de conexión.";
+                status.innerText = "❌ Error al subir contenido";
+                status.className = "error";
             }
         }
+
+        // 3. LÓGICA DE AUTO-LOGOUT (INACTIVIDAD)
+        function resetInactivityTimer() {
+            if (!authToken) return;
+
+            // Reiniciamos los contadores
+            clearTimeout(inactivityTimer);
+            clearInterval(countdownInterval);
+
+            // Timer principal para cerrar sesión
+            inactivityTimer = setTimeout(() => {
+                alert("Tu sesión ha expirado por seguridad.");
+                logout();
+            }, INACTIVITY_LIMIT_MS);
+
+            // Timer visual (cuenta regresiva)
+            let secondsLeft = INACTIVITY_LIMIT_MS / 1000;
+            updateTimerDisplay(secondsLeft);
+            
+            countdownInterval = setInterval(() => {
+                secondsLeft--;
+                updateTimerDisplay(secondsLeft);
+            }, 1000);
+        }
+
+        function updateTimerDisplay(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+            const display = document.getElementById('timer-count');
+            if(display) display.innerText = `${m}:${s}`;
+        }
+
+        function stopTimers() {
+            clearTimeout(inactivityTimer);
+            clearInterval(countdownInterval);
+        }
+
+        // Detectar movimiento para reiniciar timer
+        window.onload = () => {
+            document.body.addEventListener('mousemove', resetInactivityTimer);
+            document.body.addEventListener('keypress', resetInactivityTimer);
+            document.body.addEventListener('click', resetInactivityTimer);
+        };
     </script>
 </body>
 </html>
