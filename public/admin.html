@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Control - Pantallas</title>
+    <title>Optibelt - Control Panel</title>
     <style>
         :root {
-            --primary: #0056b3; /* Azul Corporativo */
+            /* Puedes ajustar este color al azul/verde exacto de Optibelt si lo conoces */
+            --primary: #0056b3; 
             --bg: #f4f7f6;
             --card-bg: #ffffff;
             --text: #333;
@@ -23,30 +24,60 @@
             color: var(--text);
         }
 
-        /* --- TARJETAS (LOGIN Y DASHBOARD) --- */
+        /* --- CARDS (LOGIN & DASHBOARD) --- */
         .card {
             background: var(--card-bg);
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 2.5rem; 
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12); 
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             transition: all 0.3s ease;
+            box-sizing: border-box;
         }
 
         .hidden { display: none !important; }
 
-        h2 { margin-top: 0; color: var(--primary); text-align: center; }
-        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; }
+        /* Estilo para el Logo */
+        .logo-img {
+            display: block;
+            margin: 0 auto 15px auto; /* Centrado horizontal */
+            max-width: 180px; 
+            height: auto;
+        }
+
+        h2 { 
+            margin-top: 10px; 
+            margin-bottom: 5px;
+            color: var(--primary); 
+            text-align: center; 
+            font-size: 1.5rem;
+        }
+        
+        .subtitle {
+            text-align:center; 
+            color:#666; 
+            font-size:0.95rem;
+            margin-bottom: 25px;
+            font-weight: 500;
+        }
+
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #555; }
         
         input, select, button {
             width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
+            padding: 12px; 
+            margin-bottom: 18px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
             box-sizing: border-box;
             font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+            outline: none;
         }
 
         button {
@@ -54,91 +85,120 @@
             color: white;
             border: none;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
         
         button:hover { background-color: #004494; }
-        button.secondary { background-color: #6c757d; margin-top: 10px; }
-
+        
         /* Status Bar */
-        #status-msg { text-align: center; margin-top: 10px; font-size: 0.9rem; min-height: 20px; }
-        .success { color: green; }
-        .error { color: red; }
+        #status-msg { text-align: center; margin-top: 10px; font-size: 0.95rem; min-height: 25px; font-weight: 500;}
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
 
         /* --- DASHBOARD SPECIFIC --- */
-        #dashboard-view { max-width: 500px; }
+        #dashboard-view { max-width: 520px; }
+        
+        .dashboard-header {
+            display:flex; 
+            justify-content:space-between; 
+            align-items:center; 
+            margin-bottom:25px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .logout-btn {
+            width:auto; 
+            padding: 8px 18px; 
+            font-size:0.85rem; 
+            background:#dc3545; 
+            margin-bottom: 0;
+        }
+        .logout-btn:hover { background:#c82333; }
+
         .file-upload-wrapper {
             border: 2px dashed #ccc;
-            padding: 20px;
+            padding: 25px;
             text-align: center;
-            border-radius: 5px;
-            margin-bottom: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
             background: #fafafa;
         }
-        .timer { font-size: 0.8rem; color: #999; text-align: center; margin-top: 20px; }
+        .timer { font-size: 0.85rem; color: #888; text-align: center; margin-top: 25px; }
     </style>
 </head>
 <body>
 
     <div id="login-view" class="card">
-        <h2>🔒 Acceso Seguro</h2>
-        <p style="text-align:center; color:#666; font-size:0.9rem;">Sistema de Gestión de Pantallas</p>
+        <img src="logo.png" alt="Optibelt Logo" class="logo-img" onerror="this.style.display='none'">
         
-        <label>Usuario</label>
-        <input type="text" id="user" placeholder="Ej. admin">
+        <h2>Optibelt Production Mexico</h2>
+        <p class="subtitle">Display Management System</p>
         
-        <label>Contraseña</label>
+        <label for="user">Username</label>
+        <input type="text" id="user" placeholder="Enter your username">
+        
+        <label for="pass">Password</label>
         <input type="password" id="pass" placeholder="••••••">
         
-        <button onclick="login()">Iniciar Sesión</button>
+        <button onclick="login()">Login</button>
         <div id="login-error" class="error" style="text-align:center; margin-top:10px;"></div>
     </div>
 
     <div id="dashboard-view" class="card hidden">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h2 style="margin:0;">🎛️ Control</h2>
-            <button onclick="logout()" style="width:auto; padding: 5px 15px; font-size:0.8rem; background:#d9534f;">Salir</button>
+        <div class="dashboard-header">
+            <img src="logo.png" alt="Optibelt Logo" class="logo-img" style="margin: 0; max-width: 100px;">
+            <button onclick="logout()" class="logout-btn">Logout</button>
         </div>
 
-        <label>Seleccionar Pantalla Destino:</label>
+        <label for="targetSelect">Select Target Display:</label>
         <select id="targetSelect">
-            <option value="all">📡 TODAS LAS PANTALLAS</option>
-            <option value="recepcion">Recepción</option>
-            <option value="logistica">Logística</option>
-            <option value="ventas">Ventas</option>
-            <option value="almacen">Almacén</option>
+            <option value="all">📡 ALL DISPLAYS</option>
+            <option value="recepcion">Reception</option>
+            <option value="logistica">Logistics</option>
+            <option value="ventas">Sales</option>
+            <option value="produccion">Production</option>
+            <option value="almacen">Warehouse</option>
         </select>
 
-        <label>Subir Contenido (Imagen o Video):</label>
+        <label>Upload Content (Image or Video):</label>
         <div class="file-upload-wrapper">
             <input type="file" id="fileInput" multiple accept="image/*,video/*">
-            <small style="color:#666">Soporta JPG, PNG, MP4</small>
+            <small style="color:#666; display: block; margin-top: 8px;">Supports JPG, PNG, MP4 format</small>
         </div>
 
-        <button onclick="publicar()">🚀 Enviar a Pantallas</button>
+        <button onclick="publicar()">🚀 Send to Displays</button>
         
         <div id="status-msg"></div>
-        <div class="timer">Sesión expira por inactividad en: <span id="timer-count">5:00</span></div>
+        <div class="timer">Session expires due to inactivity in: <span id="timer-count">5:00</span></div>
     </div>
 
     <script>
-        // --- CONFIGURACIÓN DE SEGURIDAD ---
-        const INACTIVITY_LIMIT_MS = 5 * 60 * 1000; // 5 Minutos
+        // --- SECURITY CONFIGURATION ---
+        const INACTIVITY_LIMIT_MS = 5 * 60 * 1000; // 5 Minutes
         let authToken = null;
         let inactivityTimer;
         let countdownInterval;
 
-        // 1. FUNCIONES DE LOGIN
+        // 1. LOGIN FUNCTIONS
         async function login() {
             const u = document.getElementById('user').value;
             const p = document.getElementById('pass').value;
             const errorDiv = document.getElementById('login-error');
 
-            // Creamos el token manualmente (Base64)
+            if(!u || !p) {
+                errorDiv.innerText = "Please enter username and password";
+                return;
+            }
+
+            // Create Basic Auth token manually (Base64)
             const token = 'Basic ' + btoa(u + ':' + p);
 
+            errorDiv.innerText = "Authenticating...";
+
             try {
-                // Probamos credenciales contra el servidor
+                // Test credentials against server
                 const res = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Authorization': token }
@@ -149,10 +209,10 @@
                     mostrarDashboard();
                     errorDiv.innerText = "";
                 } else {
-                    errorDiv.innerText = "Usuario o contraseña incorrectos";
+                    errorDiv.innerText = "Incorrect username or password";
                 }
             } catch (e) {
-                errorDiv.innerText = "Error de conexión con el servidor";
+                errorDiv.innerText = "Server connection error";
             }
         }
 
@@ -162,10 +222,11 @@
             document.getElementById('pass').value = '';
             document.getElementById('login-view').classList.remove('hidden');
             document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('status-msg').innerText = '';
             stopTimers();
         }
 
-        // 2. GESTIÓN DEL DASHBOARD
+        // 2. DASHBOARD MANAGEMENT
         function mostrarDashboard() {
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('dashboard-view').classList.remove('hidden');
@@ -178,7 +239,7 @@
             const status = document.getElementById('status-msg');
 
             if (input.files.length === 0) {
-                status.innerText = "⚠️ Selecciona un archivo primero";
+                status.innerText = "⚠️ Please select a file first";
                 status.className = "error";
                 return;
             }
@@ -189,54 +250,65 @@
                 formData.append('archivos', input.files[i]);
             }
 
-            status.innerText = "⏳ Subiendo...";
+            status.innerText = "⏳ Uploading content...";
             status.className = "";
+            // Disable button while uploading
+            document.querySelector('button[onclick="publicar()"]').disabled = true;
 
             try {
                 const res = await fetch('/publicar', {
                     method: 'POST',
-                    headers: { 'Authorization': authToken }, // ¡Enviamos la llave!
+                    headers: { 'Authorization': authToken }, // Send the key!
                     body: formData
                 });
 
                 if (res.ok) {
-                    status.innerText = "✅ ¡Enviado correctamente!";
+                    status.innerText = "✅ Sent successfully to displays!";
                     status.className = "success";
-                    input.value = ""; // Limpiar input
+                    input.value = ""; // Clear input
                 } else {
                     throw new Error();
                 }
             } catch (e) {
-                status.innerText = "❌ Error al subir contenido";
+                status.innerText = "❌ Error uploading content. Try again.";
                 status.className = "error";
+            } finally {
+                // Re-enable button
+                document.querySelector('button[onclick="publicar()"]').disabled = false;
             }
         }
 
-        // 3. LÓGICA DE AUTO-LOGOUT (INACTIVIDAD)
+        // 3. AUTO-LOGOUT LOGIC (INACTIVITY)
         function resetInactivityTimer() {
             if (!authToken) return;
 
-            // Reiniciamos los contadores
+            // Reset counters
             clearTimeout(inactivityTimer);
             clearInterval(countdownInterval);
 
-            // Timer principal para cerrar sesión
+            // Main timer to close session
             inactivityTimer = setTimeout(() => {
-                alert("Tu sesión ha expirado por seguridad.");
+                alert("Your session has expired for security reasons.");
                 logout();
             }, INACTIVITY_LIMIT_MS);
 
-            // Timer visual (cuenta regresiva)
+            // Visual timer (countdown)
             let secondsLeft = INACTIVITY_LIMIT_MS / 1000;
             updateTimerDisplay(secondsLeft);
             
             countdownInterval = setInterval(() => {
                 secondsLeft--;
                 updateTimerDisplay(secondsLeft);
+                 // Extra safety check just in case setTimeout fails
+                if(secondsLeft <= 0) { 
+                     stopTimers();
+                     logout();
+                }
             }, 1000);
         }
 
         function updateTimerDisplay(seconds) {
+            if (seconds < 0) seconds = 0;
             const m = Math.floor(seconds / 60);
             const s = Math.floor(seconds % 60).toString().padStart(2, '0');
             const display = document.getElementById('timer-count');
@@ -248,11 +320,14 @@
             clearInterval(countdownInterval);
         }
 
-        // Detectar movimiento para reiniciar timer
+        // Detect movement to reset timer
         window.onload = () => {
-            document.body.addEventListener('mousemove', resetInactivityTimer);
-            document.body.addEventListener('keypress', resetInactivityTimer);
-            document.body.addEventListener('click', resetInactivityTimer);
+            const body = document.body;
+            body.addEventListener('mousemove', resetInactivityTimer);
+            body.addEventListener('keypress', resetInactivityTimer);
+            body.addEventListener('click', resetInactivityTimer);
+            // Also reset on touch for mobile devices if accessed via tablet
+            body.addEventListener('touchstart', resetInactivityTimer);
         };
     </script>
 </body>
