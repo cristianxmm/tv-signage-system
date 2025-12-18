@@ -3,7 +3,6 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const multer = require('multer');
-const xlsx = require('xlsx');
 const fs = require('fs');
 const path = require('path');
 
@@ -15,11 +14,13 @@ const USUARIO = "admin";
 const PASSWORD = "123"; 
 
 // ⏳ TIEMPO DE VIDA DE ARCHIVOS (30 DÍAS)
+// Esto evita que se llene la tarjeta SD de la Raspberry
 const DIAS_PARA_BORRAR = 30; 
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) { cb(null, 'uploads/') },
     filename: function (req, file, cb) {
+        // Generamos nombre único para evitar que archivos con mismo nombre se reemplacen
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const ext = path.extname(file.originalname);
         cb(null, file.fieldname + '-' + uniqueSuffix + ext)
@@ -28,10 +29,11 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // --- FUNCIÓN DE LIMPIEZA AUTOMÁTICA 🧹 ---
+// Se ejecuta cada vez que alguien publica algo nuevo
 const limpiarArchivosViejos = () => {
     const carpeta = 'uploads/';
     fs.readdir(carpeta, (err, files) => {
-        if (err) return console.error("Error leyendo carpeta uploads");
+        if (err) return console.error("Error leyendo carpeta uploads para limpieza");
         
         files.forEach(file => {
             const rutaCompleta = path.join(carpeta, file);
@@ -43,7 +45,7 @@ const limpiarArchivosViejos = () => {
 
                 if (diasDeVida > DIAS_PARA_BORRAR) {
                     fs.unlink(rutaCompleta, (err) => {
-                        if (!err) console.log(`🗑️ Auto-limpieza: Se borró ${file}`);
+                        if (!err) console.log(`🗑️ Auto-limpieza: Se borró el archivo antiguo ${file}`);
                     });
                 }
             });
@@ -74,81 +76,57 @@ app.get('/admin.html', portero, (req, res) => {
     res.sendFile(path.join(__dirname, 'public/admin.html'));
 });
 
-// --- RUTA DE PUBLICACIÓN (MODIFICADA PARA GALERÍA) ---
-// Ahora usamos .array() en lugar de .single() para recibir varias fotos
+// --- RUTA DE PUBLICACIÓN OPTIMIZADA ---
 app.post('/publicar', portero, upload.array('archivos', 10), (req, res) => {
     try {
-        // Revisamos si llegaron archivos
         if (!req.files || req.files.length === 0) return res.status(400).send('Falta archivo');
         
-        limpiarArchivosViejos(); // Limpiamos basura vieja
+        limpiarArchivosViejos(); // Ejecutamos la limpieza
 
         const target = req.body.target || 'all';
         
-        // --- LÓGICA INTELIGENTE ---
+        // REVISAMOS EL TIPO DE ARCHIVO DEL PRIMER ELEMENTO
+        // (Asumimos que si suben varios, todos son del mismo tipo, o son fotos mixtas)
+        const primerArchivo = req.files[0];
+        const esVideo = primerArchivo.mimetype.includes('video');
+
+        // CASO A: VIDEO (Prioridad: Si hay un video, se muestra solo el video)
+        if (esVideo) {
+            const filePath = `/uploads/${primerArchivo.filename}`;
+            console.log(`🎬 Video enviado a: ${target}`);
+            io.emit('contentUpdate', { target, type: 'video', url: filePath });
+        }
         
-        // CASO A: Es una GALERÍA (Más de 1 archivo)
-        if (req.files.length > 1) {
-            // Creamos una lista con las URLs de todas las fotos
+        // CASO B: IMÁGENES (Galería o Imagen sola)
+        else {
             const urls = req.files.map(file => `/uploads/${file.filename}`);
-            console.log(`📡 Enviando Galería de ${req.files.length} fotos a: ${target}`);
-            
-            // Le decimos a la TV: "Oye, aquí va un paquete de fotos (gallery)"
+            console.log(`📸 Galería de ${urls.length} imágenes a: ${target}`);
+            // Enviamos siempre como galería, el frontend decide si pone flechas o no
             io.emit('contentUpdate', { target, type: 'gallery', urls: urls });
         }
         
-        // CASO B: Es UN SOLO ARCHIVO (Video, Excel o 1 sola foto)
-        else {
-            const file = req.files[0];
-            const mime = file.mimetype;
-            const filePath = `/uploads/${file.filename}`;
-
-            console.log(`📡 Enviando Archivo Único a: ${target}`);
-            if (file.originalname.endsWith('.xlsx') || mime.includes('spreadsheet')) {
-                const wb = xlsx.readFile(file.path);
-                
-                // NUEVO: Leemos TODAS las hojas, no solo la primera
-                const hojas = [];
-                wb.SheetNames.forEach(nombreHoja => {
-                    const datosHoja = xlsx.utils.sheet_to_json(wb.Sheets[nombreHoja]);
-                    // Solo agregamos la hoja si tiene datos
-                    if (datosHoja.length > 0) {
-                        hojas.push({ nombre: nombreHoja, data: datosHoja });
-                    }
-                });
-
-                // Enviamos un tipo nuevo: 'excel_full'
-                io.emit('contentUpdate', { target, type: 'excel_full', hojas: hojas });
-            } 
-            else if (mime.includes('video')) {
-                io.emit('contentUpdate', { target, type: 'video', url: filePath });
-            }
-            else {
-                // Si es una sola imagen, la mandamos como 'image' normal
-                io.emit('contentUpdate', { target, type: 'image', url: filePath });
-            }
-        }
-        
-        res.send({ status: 'ok', message: 'Enviado correctamente' });
+        res.send({ status: 'ok', message: 'Contenido publicado exitosamente' });
 
     } catch (e) {
         console.error("Error en publicación:", e);
-        res.status(500).send('Error interno');
+        res.status(500).send('Error interno del servidor');
     }
 });
 
-// CACHÉ (1 AÑO)
+// CACHÉ Y ESTÁTICOS
 app.use(express.static('public')); 
-app.use('/uploads', express.static('uploads', { maxAge: '1y', immutable: true })); 
+// Configuración de caché para navegadores (30 días)
+app.use('/uploads', express.static('uploads', { maxAge: '30d', immutable: true })); 
 
+// Crear carpeta si no existe
 if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
 
 // --- 4. SOCKET ---
 io.on('connection', (socket) => {
-    console.log('Cliente conectado');
+    console.log('Cliente conectado (Pantalla o Admin)');
     socket.on('join', (room) => socket.join(room));
 });
 
 http.listen(PORT, () => {
-    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`🚀 Servidor de Pantallas listo en http://localhost:${PORT}`);
 });
