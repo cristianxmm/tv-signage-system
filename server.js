@@ -104,11 +104,21 @@ app.post('/publicar', portero, upload.array('archivos', 10), (req, res) => {
             const filePath = `/uploads/${file.filename}`;
 
             console.log(`📡 Enviando Archivo Único a: ${target}`);
-
             if (file.originalname.endsWith('.xlsx') || mime.includes('spreadsheet')) {
                 const wb = xlsx.readFile(file.path);
-                const data = xlsx.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                io.emit('contentUpdate', { target, type: 'table', data: data });
+                
+                // NUEVO: Leemos TODAS las hojas, no solo la primera
+                const hojas = [];
+                wb.SheetNames.forEach(nombreHoja => {
+                    const datosHoja = xlsx.utils.sheet_to_json(wb.Sheets[nombreHoja]);
+                    // Solo agregamos la hoja si tiene datos
+                    if (datosHoja.length > 0) {
+                        hojas.push({ nombre: nombreHoja, data: datosHoja });
+                    }
+                });
+
+                // Enviamos un tipo nuevo: 'excel_full'
+                io.emit('contentUpdate', { target, type: 'excel_full', hojas: hojas });
             } 
             else if (mime.includes('video')) {
                 io.emit('contentUpdate', { target, type: 'video', url: filePath });

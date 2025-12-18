@@ -3,79 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pantalla TV</title>
-    
+    <title>Pantalla Corporativa</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
     
     <style>
-        body {
-            background-color: #000;
-            color: #fff;
-            margin: 0;
-            overflow: hidden;
-            font-family: sans-serif;
-        }
+        /* --- GENERAL --- */
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', Arial, sans-serif; }
+        .view-section { display: none; width: 100vw; height: 100vh; position: relative; }
 
-        .view-section { display: none; width: 100vw; height: 100vh; }
-
-        /* --- ESTILOS DE GALERÍA (SWIPER) --- */
-        #vista-galeria { width: 100%; height: 100%; }
+        /* --- GALERÍA (SWIPER) --- */
         .swiper { width: 100%; height: 100%; }
-        
         .swiper-slide {
-            text-align: center;
             background: #000;
             display: flex;
-            justify-content: center;
-            align-items: center;
+            justify-content: center; /* Centrado Horizontal */
+            align-items: center;     /* Centrado Vertical */
         }
-
         .swiper-slide img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain; /* Ajusta la imagen sin recortarla */
             display: block;
+        }
+
+        /* --- ESTILO EXCEL (CLARO) --- */
+        #vista-excel {
+            background-color: #f0f0f0; /* Fondo gris claro de app */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Contenedor de la tabla con scroll */
+        #excel-container {
+            flex: 1; /* Ocupa todo el espacio disponible */
+            overflow: auto;
+            background: #fff;
+            padding: 20px;
+        }
+
+        table {
             width: 100%;
-            height: 100%;
-            object-fit: contain; /* Ajusta la imagen sin cortarla */
+            border-collapse: collapse;
+            font-size: 1.2rem;
+            color: #000;
         }
 
-        /* --- OTROS ESTILOS --- */
-        #vista-tabla { overflow: auto; padding: 20px; box-sizing: border-box; }
-        table { width: 100%; border-collapse: collapse; font-size: 1.5em; }
-        th, td { padding: 10px; border: 1px solid #444; }
-        th { background: #333; color: cyan; }
-
-        #vista-video video { width: 100%; height: 100%; object-fit: contain; }
-
-        #id-pantalla {
-            position: absolute; bottom: 10px; right: 10px; z-index: 100;
-            background: rgba(0,0,0,0.5); padding: 5px; border-radius: 4px;
+        th {
+            background-color: #e6e6e6; /* Gris encabezado */
+            border: 1px solid #999;
+            padding: 10px;
+            text-align: left;
+            font-weight: bold;
         }
+
+        td {
+            border: 1px solid #ccc; /* Bordes celdas */
+            padding: 8px 12px;
+        }
+
+        tr:nth-child(even) { background-color: #f9f9f9; } /* Filas alternas */
+
+        /* --- PESTAÑAS (TABS) INFERIORES --- */
+        #excel-tabs {
+            height: 50px;
+            background: #217346; /* Verde Excel */
+            display: flex;
+            align-items: flex-end;
+            padding-left: 10px;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background: #1a5c38;
+            color: #fff;
+            border: none;
+            margin-right: 2px;
+            cursor: pointer;
+            font-size: 1rem;
+            border-radius: 5px 5px 0 0;
+            opacity: 0.8;
+        }
+
+        .tab-btn.active {
+            background: #fff;
+            color: #217346;
+            font-weight: bold;
+            opacity: 1;
+        }
+
+        /* --- VIDEO --- */
+        #vista-video { background: #000; display: flex; align-items: center; justify-content: center; }
+        video { width: 100%; height: 100%; object-fit: contain; }
+
+        #id-pantalla { position: absolute; bottom: 10px; right: 10px; color: rgba(255,255,255,0.5); z-index: 999; }
     </style>
 </head>
 <body>
 
     <div id="vista-galeria" class="view-section">
         <div class="swiper mySwiper">
-            <div class="swiper-wrapper" id="galeria-contenido">
-                </div>
+            <div class="swiper-wrapper" id="galeria-contenido"></div>
             <div class="swiper-button-next"></div>
             <div class="swiper-button-prev"></div>
             <div class="swiper-pagination"></div>
         </div>
     </div>
 
+    <div id="vista-excel" class="view-section" style="display: none;">
+        <div id="excel-container">
+            <div id="tabla-render"></div> </div>
+        <div id="excel-tabs"></div> </div>
+
     <div id="vista-video" class="view-section">
-        <video id="video-display" autoplay muted loop playsinline><source src="" type="video/mp4"></video>
+        <video id="video-display" autoplay muted loop playsinline></video>
     </div>
 
-    <div id="vista-tabla" class="view-section">
-        <div id="tabla-contenido"></div>
-    </div>
-    
-    <div id="vista-imagen" class="view-section" style="display:flex; justify-content:center; align-items:center;">
-        <img id="img-display" src="" style="max-width:100%; max-height:100%;">
+    <div id="vista-imagen" class="view-section" style="display:flex; justify-content:center; align-items:center; background:black;">
+        <img id="img-display" src="" style="max-width:100%; max-height:100%; object-fit:contain;">
     </div>
 
-    <div id="id-pantalla">Cargando...</div>
+    <div id="id-pantalla">ID: ...</div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
@@ -87,63 +135,51 @@
         document.getElementById('id-pantalla').innerText = `ID: ${myId}`;
         socket.emit('join', myId);
 
-        let swiper; // Variable para guardar la instancia del carrusel
+        let swiper;
+        let hojasExcelActuales = []; // Para guardar los datos del excel en memoria
 
         socket.on('contentUpdate', (payload) => {
             if(payload.target !== 'all' && payload.target !== myId) return;
-
             ocultarTodo();
 
-            // --- MODO GALERÍA (MÚLTIPLES FOTOS) ---
+            // --- GALERÍA (MANUAL) ---
             if (payload.type === 'gallery') {
                 const wrapper = document.getElementById('galeria-contenido');
-                wrapper.innerHTML = ''; // Limpiar fotos viejas
-
-                // Crear los slides
+                wrapper.innerHTML = '';
                 payload.urls.forEach(url => {
-                    const slide = document.createElement('div');
-                    slide.className = 'swiper-slide';
-                    slide.innerHTML = `<img src="${url}" />`;
-                    wrapper.appendChild(slide);
+                    wrapper.innerHTML += `<div class="swiper-slide"><img src="${url}"></div>`;
                 });
-
                 document.getElementById('vista-galeria').style.display = 'block';
 
-                // Inicializar (o reiniciar) Swiper
-                if (swiper) swiper.destroy(true, true); // Destruir anterior para evitar bugs
+                if (swiper) swiper.destroy(true, true);
                 
                 swiper = new Swiper(".mySwiper", {
-                    spaceBetween: 30,
-                    effect: "fade", // Efecto desvanecer (puedes quitarlo si prefieres slide normal)
-                    grabCursor: true, // Manita para agarrar
-                    loop: true, // Infinito
-                    navigation: {
-                        nextEl: ".swiper-button-next",
-                        prevEl: ".swiper-button-prev",
-                    },
-                    pagination: {
-                        el: ".swiper-pagination",
-                        clickable: true,
-                    },
-                    autoplay: {
-                        delay: 5000, // Cambia sola cada 5 segundos (si no la tocas)
-                        disableOnInteraction: false,
-                    },
+                    spaceBetween: 0,
+                    effect: "fade", // Bonito efecto de desvanecer
+                    navigation: { nextEl: ".swiper-button-next", prevEl: ".swiper-button-prev" },
+                    pagination: { el: ".swiper-pagination", clickable: true },
+                    autoplay: false, // 🛑 AQUÍ SE DESACTIVA EL AUTO-CAMBIO
+                    loop: true
                 });
-            } 
-            // --- MODO VIDEO ---
+            }
+
+            // --- EXCEL (MULTI HOJAS) ---
+            else if (payload.type === 'excel_full') {
+                hojasExcelActuales = payload.hojas; // Guardamos datos
+                renderExcelTabs(); // Dibujamos pestañas
+                cambiarHoja(0); // Mostramos la primera hoja por defecto
+                document.getElementById('vista-excel').style.display = 'flex'; // Usamos flex para el layout
+            }
+
+            // --- VIDEO ---
             else if (payload.type === 'video') {
                 const v = document.getElementById('video-display');
                 v.src = payload.url;
-                document.getElementById('vista-video').style.display = 'block';
-                v.play().catch(e=>console.log("Error play video"));
+                document.getElementById('vista-video').style.display = 'flex';
+                v.play().catch(e => console.log("Click para reproducir"));
             }
-            // --- MODO TABLA ---
-            else if (payload.type === 'table') {
-                renderTable(payload.data);
-                document.getElementById('vista-tabla').style.display = 'block';
-            }
-            // --- MODO IMAGEN ÚNICA ---
+
+            // --- IMAGEN ÚNICA ---
             else if (payload.type === 'image') {
                 document.getElementById('img-display').src = payload.url;
                 document.getElementById('vista-imagen').style.display = 'flex';
@@ -155,20 +191,50 @@
             document.getElementById('video-display').pause();
         }
 
-        function renderTable(data) {
-            // (Tu código de tabla anterior va aquí...)
-            const c = document.getElementById('tabla-contenido');
-            let h = '<table><thead><tr>';
-            Object.keys(data[0]).forEach(k => h+=`<th>${k}</th>`);
-            h+='</tr></thead><tbody>';
-            data.forEach(r => {
-                h+='<tr>';
-                Object.values(r).forEach(v => h+=`<td>${v}</td>`);
-                h+='</tr>';
+        // --- LÓGICA DE EXCEL ---
+        function renderExcelTabs() {
+            const container = document.getElementById('excel-tabs');
+            container.innerHTML = '';
+            
+            hojasExcelActuales.forEach((hoja, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'tab-btn';
+                btn.innerText = hoja.nombre;
+                btn.onclick = () => cambiarHoja(index);
+                container.appendChild(btn);
             });
-            h+='</tbody></table>';
-            c.innerHTML = h;
         }
+
+        function cambiarHoja(index) {
+            // 1. Actualizar estilo de pestañas
+            document.querySelectorAll('.tab-btn').forEach((b, i) => {
+                b.classList.toggle('active', i === index);
+            });
+
+            // 2. Renderizar tabla
+            const data = hojasExcelActuales[index].data;
+            const container = document.getElementById('tabla-render');
+            
+            if(!data || data.length === 0) {
+                container.innerHTML = '<h3>Hoja vacía</h3>';
+                return;
+            }
+
+            let html = '<table><thead><tr>';
+            const headers = Object.keys(data[0]);
+            
+            headers.forEach(h => html += `<th>${h}</th>`);
+            html += '</tr></thead><tbody>';
+            
+            data.forEach(row => {
+                html += '<tr>';
+                headers.forEach(h => html += `<td>${row[h] || ''}</td>`); // Manejo de celdas vacías
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
     </script>
 </body>
 </html>
