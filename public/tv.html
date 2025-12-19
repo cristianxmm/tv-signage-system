@@ -26,6 +26,13 @@
             text-shadow: 0 0 5px black;
         }
 
+        /* --- AQUÍ ESTÁ EL TRUCO --- */
+        /* Esta clase forzará a ocultar las flechas sin importar lo que diga Swiper */
+        .modo-auto .swiper-button-next,
+        .modo-auto .swiper-button-prev {
+            display: none !important; /* El !important es la clave */
+        }
+
         /* Estilos del Video */
         video { width: 100%; height: 100%; object-fit: contain; }
 
@@ -37,6 +44,7 @@
     <div id="vista-galeria" class="view-section">
         <div class="swiper mySwiper">
             <div class="swiper-wrapper" id="galeria-contenido"></div>
+            
             <div class="swiper-button-next"></div>
             <div class="swiper-button-prev"></div>
             <div class="swiper-pagination"></div>
@@ -64,12 +72,10 @@
 
         socket.on('contentUpdate', (payload) => {
             
-            // FILTRO DE SEGURIDAD (ALL vs ID)
             if(payload.target !== 'all' && payload.target !== myId) return;
 
             ocultarTodo();
 
-            // --- LÓGICA DE GALERÍA ---
             if (payload.type === 'gallery') {
                 const wrapper = document.getElementById('galeria-contenido');
                 wrapper.innerHTML = '';
@@ -81,11 +87,9 @@
 
                 if (swiper) swiper.destroy(true, true);
                 
-                // REFERENCIAS A LOS BOTONES DOM
-                const nextBtn = document.querySelector('.swiper-button-next');
-                const prevBtn = document.querySelector('.swiper-button-prev');
+                // Obtenemos el contenedor principal
+                const swiperContainer = document.querySelector('.mySwiper');
 
-                // CONFIGURACIÓN BASE DE SWIPER
                 let swiperOptions = {
                     effect: "fade",
                     loop: true,
@@ -93,44 +97,39 @@
                     keyboard: { enabled: true }
                 };
 
-                // LÓGICA DE DECISIÓN: ¿AUTO O MANUAL?
+                // LÓGICA DE CLASES CSS
                 if (payload.options && payload.options.autoPlay) {
-                    // MODO AUTOMÁTICO
-                    // 1. Agregamos configuración de autoplay
+                    // MODO AUTO:
+                    // 1. Agregamos la clase .modo-auto al contenedor (CSS ocultará las flechas a la fuerza)
+                    swiperContainer.classList.add('modo-auto');
+
+                    // 2. Configuración de tiempo
                     swiperOptions.autoplay = {
                         delay: payload.options.duration * 1000, 
                         disableOnInteraction: false 
                     };
                     
-                    // 2. Ocultamos botones visualmente
-                    nextBtn.style.display = 'none';
-                    prevBtn.style.display = 'none';
-
-                    // 3. IMPORTANTE: NO agregamos 'navigation' a swiperOptions
-                    // Así Swiper no intenta controlarlos.
+                    // 3. NO pasamos navigation a Swiper
 
                 } else {
-                    // MODO MANUAL
-                    // 1. Mostramos botones visualmente
-                    nextBtn.style.display = 'flex'; 
-                    prevBtn.style.display = 'flex';
+                    // MODO MANUAL:
+                    // 1. Quitamos la clase .modo-auto (Las flechas volverán a ser visibles)
+                    swiperContainer.classList.remove('modo-auto');
 
-                    // 2. Agregamos configuración de navegación
+                    // 2. Activamos navegación en Swiper
                     swiperOptions.navigation = { 
                         nextEl: ".swiper-button-next", 
                         prevEl: ".swiper-button-prev" 
                     };
                 }
 
-                // INICIAR SWIPER CON LA CONFIGURACIÓN DINÁMICA
                 swiper = new Swiper(".mySwiper", swiperOptions);
             } 
-            // --- LÓGICA DE VIDEO ---
             else if (payload.type === 'video') {
                 const v = document.getElementById('video-display');
                 v.src = payload.url;
                 document.getElementById('vista-video').style.display = 'flex';
-                v.play().catch(e => console.log("Interacción requerida para audio"));
+                v.play().catch(e => console.log("Interacción requerida"));
             }
         });
 
