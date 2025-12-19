@@ -6,116 +6,111 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 
-// --- 1. CONFIGURACIÓN ---
 const PORT = 3000; 
 
-// 🔐 CREDENCIALES
-const USUARIO = "admin";
-const PASSWORD = "123"; // ¡Cámbialo antes de producción!
+// 🔐 LISTA DE USUARIOS (Usuario : Contraseña)
+// Puedes agregar cuantos quieras aquí.
+const USUARIOS = {
+    "ADMIN": "IT_0Pm**",           // El jefe
+    "LOGISTIC": "Logis_0Pm**", // Usuario de logística
+    "RH": "Rh2025**",       // Usuario de ventas
+};
 
-// TIEMPO DE VIDA GENERAL (30 DÍAS)
-// Red de seguridad por si quedan archivos huérfanos que nadie borró
 const DIAS_PARA_BORRAR = 30; 
 
+// Configuración de Multer
 const storage = multer.diskStorage({
     destination: function (req, file, cb) { cb(null, 'uploads/') },
     filename: function (req, file, cb) {
-        // Ponemos el timestamp AL INICIO para asegurar unicidad
-        // Ej: 17150099-menu.jpg
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         cb(null, uniqueSuffix + '-' + file.originalname);
     }
 });
 const upload = multer({ storage: storage });
 
-// --- BORRAR DUPLICADOS ANTERIORES ---
-// Esta es la que ahorra espacio en el servidor al instante
+// --- Limpieza de Versiones Anteriores (Ahorra espacio) ---
 const borrarVersionesAnteriores = (archivoNuevo) => {
     const carpeta = 'uploads/';
     const nombreOriginal = archivoNuevo.originalname; 
     const nombreGuardado = archivoNuevo.filename;
-
     fs.readdir(carpeta, (err, files) => {
         if (err) return;
         files.forEach(file => {
-            // Buscamos archivos que terminen con el mismo nombre original
-            // Ej: Si subes "video.mp4", borra "1234-video.mp4" y "5678-video.mp4"
             if (file.endsWith(nombreOriginal) && file !== nombreGuardado) {
-                const rutaVieja = path.join(carpeta, file);
-                fs.unlink(rutaVieja, (err) => {
-                    if (!err) console.log(`♻️  Espacio liberado: Se borró versión vieja de ${nombreOriginal}`);
-                });
+                fs.unlink(path.join(carpeta, file), ()=>{});
             }
         });
     });
 };
 
-// Limpieza general de basura antigua (por si acaso)
 const limpiarArchivosMuyViejos = () => {
     const carpeta = 'uploads/';
     fs.readdir(carpeta, (err, files) => {
         if (err) return;
         files.forEach(file => {
-            const rutaCompleta = path.join(carpeta, file);
-            fs.stat(rutaCompleta, (err, stats) => {
+            const ruta = path.join(carpeta, file);
+            fs.stat(ruta, (err, s) => {
                 if (err) return;
-                const dias = (new Date().getTime() - new Date(stats.birthtime).getTime()) / (1000 * 3600 * 24);
-                if (dias > DIAS_PARA_BORRAR) fs.unlink(rutaCompleta, ()=>{});
+                const dias = (new Date().getTime() - new Date(s.birthtime).getTime()) / (1000 * 3600 * 24);
+                if (dias > DIAS_PARA_BORRAR) fs.unlink(ruta, ()=>{});
             });
         });
     });
 };
 
-// --- 2. SEGURIDAD ---
+// --- MIDDLEWARE DE SEGURIDAD (MULTI-USUARIO) ---
 const portero = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'No autorizado' });
+    
+    // Decodificar usuario y contraseña
     const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-    if (auth[0] === USUARIO && auth[1] === PASSWORD) next(); 
-    else return res.status(401).json({ error: 'Credenciales incorrectas' });
+    const usuarioIngresado = auth[0];
+    const passwordIngresado = auth[1];
+
+    // Verificar si el usuario existe y la contraseña coincide
+    if (USUARIOS[usuarioIngresado] && USUARIOS[usuarioIngresado] === passwordIngresado) {
+        next(); // ¡Pase usted!
+    } else {
+        return res.status(401).json({ error: 'Credenciales incorrectas' });
+    }
 };
 
-// --- 3. RUTAS Y CACHÉ ---
 app.use(express.static('public')); 
-
-//CACHÉ ACTIVADO (30 DÍAS): Vital para que el video no se corte si falla el WiFi.
-// No afecta la actualización porque cada archivo nuevo tiene nombre distinto.
 app.use('/uploads', express.static('uploads', { maxAge: '30d' })); 
-
 if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
 
-// Login para el HTML del panel admin
 app.post('/api/login', portero, (req, res) => res.json({ status: 'ok' }));
+app.get('/admin.html', portero, (req, res) => { res.sendFile(path.join(__dirname, 'public/admin.html')); });
 
-// Admin Panel
-app.get('/admin.html', portero, (req, res) => {
-    res.sendFile(path.join(__dirname, 'public/admin.html'));
-});
-
-// --- RUTA DE PUBLICACIÓN MAESTRA ---
+// --- RUTA DE PUBLICACIÓN ---
 app.post('/publicar', portero, upload.array('archivos', 10), (req, res) => {
     try {
         if (!req.files || req.files.length === 0) return res.status(400).json({error: 'Falta archivo'});
         
         limpiarArchivosMuyViejos(); 
-        
-        // Ejecutamos la limpieza inteligente archivo por archivo
-        req.files.forEach(file => {
-            borrarVersionesAnteriores(file);
-        });
+        req.files.forEach(file => borrarVersionesAnteriores(file));
 
         const target = req.body.target || 'all';
+        
+        // RECIBIMOS LAS OPCIONES DE SLIDESHOW
+        const autoPlay = req.body.isAuto === 'true'; // Convertir string a booleano
+        const durationSec = parseInt(req.body.duration) || 10;
+
         const primerArchivo = req.files[0];
         
-        // Lógica de Video vs Galería
         if (primerArchivo.mimetype.includes('video')) {
             const url = `/uploads/${primerArchivo.filename}`;
-            console.log(`🎬 Video nuevo: ${url}`);
             io.emit('contentUpdate', { target, type: 'video', url });
         } else {
             const urls = req.files.map(f => `/uploads/${f.filename}`);
-            console.log(`📸 Galería nueva: ${urls.length} fotos`);
-            io.emit('contentUpdate', { target, type: 'gallery', urls });
+            io.emit('contentUpdate', { 
+                target, 
+                type: 'gallery', 
+                urls,
+                // Enviamos la configuración a la TV
+                options: { autoPlay, duration: durationSec } 
+            });
         }
         res.json({ status: 'ok' });
     } catch (e) {
@@ -124,10 +119,5 @@ app.post('/publicar', portero, upload.array('archivos', 10), (req, res) => {
     }
 });
 
-// --- 4. SOCKET ---
-io.on('connection', (socket) => { 
-    console.log('Cliente conectado');
-    socket.on('join', (room) => socket.join(room)); 
-});
-
-http.listen(PORT, () => console.log(`🚀 Sistema listo en puerto ${PORT}`));
+io.on('connection', (socket) => { socket.on('join', (room) => socket.join(room)); });
+http.listen(PORT, () => console.log(`🚀 Sistema Optibelt listo en puerto ${PORT}`));

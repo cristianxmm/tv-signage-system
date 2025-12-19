@@ -5,37 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pantalla TV</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
-    
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; background: #000; }
         .view-section { display: none; width: 100vw; height: 100vh; }
-
-        /* Estilos Galería */
         .swiper { width: 100%; height: 100%; }
-        .swiper-slide {
-            background: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .swiper-slide img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain; /* La imagen nunca se corta */
-        }
-        
-        /* Flechas más grandes y visibles para TV */
+        .swiper-slide { background: #000; display: flex; justify-content: center; align-items: center; }
+        .swiper-slide img { max-width: 100%; max-height: 100%; object-fit: contain; }
         .swiper-button-next, .swiper-button-prev { color: white; transform: scale(1.5); text-shadow: 0 0 5px black; }
-
-        /* Video */
         video { width: 100%; height: 100%; object-fit: contain; }
-
-        /* ID en esquina */
-        #id-pantalla { position: absolute; bottom: 15px; right: 15px; color: rgba(255,255,255,0.3); font-size: 20px; z-index: 999; }
+        #id-pantalla { position: absolute; bottom: 15px; right: 15px; color: rgba(255,255,255,0.3); font-size: 20px; z-index: 999; font-family: sans-serif;}
     </style>
 </head>
 <body>
-
     <div id="vista-galeria" class="view-section">
         <div class="swiper mySwiper">
             <div class="swiper-wrapper" id="galeria-contenido"></div>
@@ -44,16 +25,13 @@
             <div class="swiper-pagination"></div>
         </div>
     </div>
-
     <div id="vista-video" class="view-section" style="display: flex; justify-content: center; align-items: center;">
         <video id="video-display" autoplay muted loop playsinline></video>
     </div>
-
-    <div id="id-pantalla">Cargando ID...</div>
+    <div id="id-pantalla">ID: ...</div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    
     <script>
         const socket = io();
         const params = new URLSearchParams(window.location.search);
@@ -64,52 +42,47 @@
         let swiper;
 
         socket.on('contentUpdate', (payload) => {
-            // Filtrar si el mensaje es para mí
             if(payload.target !== 'all' && payload.target !== myId) return;
-
             ocultarTodo();
 
             if (payload.type === 'gallery') {
                 const wrapper = document.getElementById('galeria-contenido');
                 wrapper.innerHTML = '';
-                
-                payload.urls.forEach(url => {
-                    wrapper.innerHTML += `<div class="swiper-slide"><img src="${url}"></div>`;
-                });
-
+                payload.urls.forEach(url => wrapper.innerHTML += `<div class="swiper-slide"><img src="${url}"></div>`);
                 document.getElementById('vista-galeria').style.display = 'block';
 
-                // Si ya existía un carrusel, lo destruimos para crear uno nuevo limpio
                 if (swiper) swiper.destroy(true, true);
                 
+                // --- LÓGICA DE DECISIÓN (Auto vs Manual) ---
+                let autoplayConfig = false; // Por defecto es manual (estático)
+                
+                // Si el admin activó el check de Auto-play:
+                if (payload.options && payload.options.autoPlay) {
+                    autoplayConfig = {
+                        delay: payload.options.duration * 1000, 
+                        disableOnInteraction: false 
+                    };
+                }
+
                 swiper = new Swiper(".mySwiper", {
-                    effect: "fade", // Efecto suave
-                    loop: true,     // Infinito
-                    autoplay: false, // MANUAL (Solo cambia con flechas/click)
-                    navigation: {
-                        nextEl: ".swiper-button-next",
-                        prevEl: ".swiper-button-prev",
-                    },
-                    pagination: {
-                        el: ".swiper-pagination",
-                        clickable: true,
-                    },
-                    keyboard: { enabled: true } // Permite usar flechas del teclado/control remoto
+                    effect: "fade", loop: true,
+                    autoplay: autoplayConfig, // Aplicamos la decisión aquí
+                    navigation: { nextEl: ".swiper-button-next", prevEl: ".swiper-button-prev" },
+                    pagination: { el: ".swiper-pagination", clickable: true },
+                    keyboard: { enabled: true }
                 });
             } 
             else if (payload.type === 'video') {
                 const v = document.getElementById('video-display');
                 v.src = payload.url;
                 document.getElementById('vista-video').style.display = 'flex';
-                v.play().catch(e => console.log("Interacción requerida para audio"));
+                v.play().catch(e => console.log("Click para reproducir"));
             }
         });
 
         function ocultarTodo() {
             document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
-            const v = document.getElementById('video-display');
-            v.pause();
-            v.src = "";
+            const v = document.getElementById('video-display'); v.pause(); v.src = "";
         }
     </script>
 </body>

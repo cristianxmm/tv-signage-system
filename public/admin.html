@@ -5,143 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Optibelt - Control Panel</title>
     <style>
-        :root {
-            /* Puedes ajustar este color al azul/verde exacto de Optibelt si lo conoces */
-            --primary: #0056b3; 
-            --bg: #f4f7f6;
-            --card-bg: #ffffff;
-            --text: #333;
-        }
-
-        body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg);
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: var(--text);
-        }
-
-        /* --- CARDS (LOGIN & DASHBOARD) --- */
-        .card {
-            background: var(--card-bg);
-            padding: 2.5rem; 
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.12); 
-            width: 100%;
-            max-width: 420px;
-            transition: all 0.3s ease;
-            box-sizing: border-box;
-        }
-
+        :root { --primary: #0056b3; --bg: #f4f7f6; --card-bg: #ffffff; --text: #333; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; color: var(--text); }
+        .card { background: var(--card-bg); padding: 2.5rem; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); width: 100%; max-width: 450px; transition: all 0.3s ease; box-sizing: border-box; }
         .hidden { display: none !important; }
-
-        /* Estilo para el Logo */
-        .logo-img {
-            display: block;
-            margin: 0 auto 15px auto; /* Centrado horizontal */
-            max-width: 180px; 
-            height: auto;
-        }
-
-        h2 { 
-            margin-top: 10px; 
-            margin-bottom: 5px;
-            color: var(--primary); 
-            text-align: center; 
-            font-size: 1.5rem;
-        }
-        
-        .subtitle {
-            text-align:center; 
-            color:#666; 
-            font-size:0.95rem;
-            margin-bottom: 25px;
-            font-weight: 500;
-        }
-
+        .logo-img { display: block; margin: 0 auto 15px auto; max-width: 180px; height: auto; }
+        h2 { margin: 10px 0 5px 0; color: var(--primary); text-align: center; font-size: 1.5rem; }
+        .subtitle { text-align:center; color:#666; font-size:0.95rem; margin-bottom: 25px; font-weight: 500; }
         label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #555; }
+        input[type="text"], input[type="password"], select, button { width: 100%; padding: 12px; margin-bottom: 18px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
         
-        input, select, button {
-            width: 100%;
-            padding: 12px; 
-            margin-bottom: 18px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 1rem;
-            transition: border-color 0.3s;
-        }
+        /* SETTINGS BOX */
+        .settings-box { background: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .checkbox-row { display: flex; align-items: center; margin-bottom: 10px; }
+        .checkbox-row input { width: 20px; height: 20px; margin-right: 10px; cursor: pointer; }
+        .checkbox-row label { margin-bottom: 0; cursor: pointer; }
+        .duration-input { display: flex; align-items: center; gap: 10px; margin-left: 30px; transition: opacity 0.3s; }
+        .duration-input input { width: 80px; padding: 8px; margin-bottom: 0; text-align: center; }
+        .disabled { opacity: 0.5; pointer-events: none; }
 
-        input:focus, select:focus {
-            border-color: var(--primary);
-            outline: none;
-        }
-
-        button {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-        
+        button { background-color: var(--primary); color: white; border: none; cursor: pointer; font-weight: 700; }
         button:hover { background-color: #004494; }
-        
-        /* Status Bar */
-        #status-msg { text-align: center; margin-top: 10px; font-size: 0.95rem; min-height: 25px; font-weight: 500;}
-        .success { color: #28a745; }
-        .error { color: #dc3545; }
-
-        /* --- DASHBOARD SPECIFIC --- */
-        #dashboard-view { max-width: 520px; }
-        
-        .dashboard-header {
-            display:flex; 
-            justify-content:space-between; 
-            align-items:center; 
-            margin-bottom:25px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 15px;
-        }
-
-        .logout-btn {
-            width:auto; 
-            padding: 8px 18px; 
-            font-size:0.85rem; 
-            background:#dc3545; 
-            margin-bottom: 0;
-        }
-        .logout-btn:hover { background:#c82333; }
-
-        .file-upload-wrapper {
-            border: 2px dashed #ccc;
-            padding: 25px;
-            text-align: center;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            background: #fafafa;
-        }
-        .timer { font-size: 0.85rem; color: #888; text-align: center; margin-top: 25px; }
+        .dashboard-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+        .logout-btn { width:auto; padding: 8px 18px; font-size:0.85rem; background:#dc3545; margin-bottom: 0; }
+        .file-upload-wrapper { border: 2px dashed #ccc; padding: 25px; text-align: center; border-radius: 8px; margin-bottom: 20px; background: #fafafa; }
+        #status-msg { text-align: center; margin-top: 10px; }
+        .success { color: #28a745; } .error { color: #dc3545; }
     </style>
 </head>
 <body>
 
     <div id="login-view" class="card">
         <img src="logo.png" alt="Optibelt Logo" class="logo-img" onerror="this.style.display='none'">
-        
         <h2>Optibelt Production Mexico</h2>
         <p class="subtitle">Display Management System</p>
-        
-        <label for="user">Username</label>
-        <input type="text" id="user" placeholder="Enter your username">
-        
-        <label for="pass">Password</label>
+        <label>Username</label>
+        <input type="text" id="user" placeholder="User">
+        <label>Password</label>
         <input type="password" id="pass" placeholder="••••••">
-        
         <button onclick="login()">Login</button>
         <div id="login-error" class="error" style="text-align:center; margin-top:10px;"></div>
     </div>
@@ -152,183 +53,92 @@
             <button onclick="logout()" class="logout-btn">Logout</button>
         </div>
 
-        <label for="targetSelect">Select Target Display:</label>
+        <label>Target Display:</label>
         <select id="targetSelect">
             <option value="all">📡 ALL DISPLAYS</option>
-            <option value="reception">Reception</option>
-            <option value="logistics">Logistics</option>
-            <option value="sales">Sales</option>
-            <option value="production">Production</option>
-            <option value="warehouse">Warehouse</option>
+            <option value="CrossCutter">Cross Cutter</option>
+            <option value="Vulcas">Vulcas</option>
+            <option value="Production Floor">Production Floor</option>
+            <option value="Confections">Confections</option>
+            <option value="Kalandria">Kalandria</option>
         </select>
 
-        <label>Upload Content (Image or Video):</label>
+        <label>Upload Content:</label>
         <div class="file-upload-wrapper">
             <input type="file" id="fileInput" multiple accept="image/*,video/*">
-            <small style="color:#666; display: block; margin-top: 8px;">Supports JPG, PNG, MP4 format</small>
+            <small style="color:#666; display:block; margin-top:8px;">JPG, PNG, MP4</small>
+        </div>
+
+        <label>Slideshow Settings:</label>
+        <div class="settings-box">
+            <div class="checkbox-row">
+                <input type="checkbox" id="autoPlayCheck" onchange="toggleDurationInput()">
+                <label for="autoPlayCheck">Auto-play Images (Slideshow)</label>
+            </div>
+            <div class="duration-input disabled" id="durationContainer">
+                <span>Change every:</span>
+                <input type="number" id="durationValue" value="10" min="3" max="300">
+                <span>seconds</span>
+            </div>
         </div>
 
         <button onclick="publicar()">🚀 Send to Displays</button>
-        
         <div id="status-msg"></div>
-        <div class="timer">Session expires due to inactivity in: <span id="timer-count">5:00</span></div>
     </div>
 
     <script>
-        // --- SECURITY CONFIGURATION ---
-        const INACTIVITY_LIMIT_MS = 5 * 60 * 1000; // 5 Minutes
         let authToken = null;
-        let inactivityTimer;
-        let countdownInterval;
 
-        // 1. LOGIN FUNCTIONS
+        function toggleDurationInput() {
+            const isChecked = document.getElementById('autoPlayCheck').checked;
+            document.getElementById('durationContainer').classList.toggle('disabled', !isChecked);
+        }
+
         async function login() {
             const u = document.getElementById('user').value;
             const p = document.getElementById('pass').value;
             const errorDiv = document.getElementById('login-error');
-
-            if(!u || !p) {
-                errorDiv.innerText = "Please enter username and password";
-                return;
-            }
-
-            // Create Basic Auth token manually (Base64)
             const token = 'Basic ' + btoa(u + ':' + p);
-
             errorDiv.innerText = "Authenticating...";
-
             try {
-                // Test credentials against server
-                const res = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Authorization': token }
-                });
-
-                if (res.ok) {
-                    authToken = token;
-                    mostrarDashboard();
-                    errorDiv.innerText = "";
-                } else {
-                    errorDiv.innerText = "Incorrect username or password";
-                }
-            } catch (e) {
-                errorDiv.innerText = "Server connection error";
-            }
+                const res = await fetch('/api/login', { method: 'POST', headers: { 'Authorization': token } });
+                if (res.ok) { authToken = token; document.getElementById('login-view').classList.add('hidden'); document.getElementById('dashboard-view').classList.remove('hidden'); errorDiv.innerText = ""; } 
+                else { errorDiv.innerText = "Incorrect username or password"; }
+            } catch (e) { errorDiv.innerText = "Connection error"; }
         }
 
         function logout() {
             authToken = null;
-            document.getElementById('user').value = '';
-            document.getElementById('pass').value = '';
+            document.getElementById('user').value = ''; document.getElementById('pass').value = '';
             document.getElementById('login-view').classList.remove('hidden');
             document.getElementById('dashboard-view').classList.add('hidden');
-            document.getElementById('status-msg').innerText = '';
-            stopTimers();
-        }
-
-        // 2. DASHBOARD MANAGEMENT
-        function mostrarDashboard() {
-            document.getElementById('login-view').classList.add('hidden');
-            document.getElementById('dashboard-view').classList.remove('hidden');
-            resetInactivityTimer();
         }
 
         async function publicar() {
             const input = document.getElementById('fileInput');
             const target = document.getElementById('targetSelect').value;
+            const isAuto = document.getElementById('autoPlayCheck').checked;
+            const duration = document.getElementById('durationValue').value;
             const status = document.getElementById('status-msg');
 
-            if (input.files.length === 0) {
-                status.innerText = "⚠️ Please select a file first";
-                status.className = "error";
-                return;
-            }
+            if (input.files.length === 0) { status.innerText = "⚠️ Select a file"; status.className = "error"; return; }
 
             const formData = new FormData();
             formData.append('target', target);
-            for (let i = 0; i < input.files.length; i++) {
-                formData.append('archivos', input.files[i]);
-            }
+            formData.append('isAuto', isAuto);      // Enviamos decisión de autoplay
+            formData.append('duration', duration);  // Enviamos tiempo
+            for (let i = 0; i < input.files.length; i++) formData.append('archivos', input.files[i]);
 
-            status.innerText = "⏳ Uploading content...";
-            status.className = "";
-            // Disable button while uploading
+            status.innerText = "⏳ Uploading..."; status.className = "";
             document.querySelector('button[onclick="publicar()"]').disabled = true;
 
             try {
-                const res = await fetch('/publicar', {
-                    method: 'POST',
-                    headers: { 'Authorization': authToken }, // Send the key!
-                    body: formData
-                });
-
-                if (res.ok) {
-                    status.innerText = "✅ Sent successfully to displays!";
-                    status.className = "success";
-                    input.value = ""; // Clear input
-                } else {
-                    throw new Error();
-                }
-            } catch (e) {
-                status.innerText = "❌ Error uploading content. Try again.";
-                status.className = "error";
-            } finally {
-                // Re-enable button
-                document.querySelector('button[onclick="publicar()"]').disabled = false;
-            }
+                const res = await fetch('/publicar', { method: 'POST', headers: { 'Authorization': authToken }, body: formData });
+                if (res.ok) { status.innerText = "✅ Sent successfully!"; status.className = "success"; input.value = ""; } 
+                else throw new Error();
+            } catch (e) { status.innerText = "❌ Error uploading."; status.className = "error"; } 
+            finally { document.querySelector('button[onclick="publicar()"]').disabled = false; }
         }
-
-        // 3. AUTO-LOGOUT LOGIC (INACTIVITY)
-        function resetInactivityTimer() {
-            if (!authToken) return;
-
-            // Reset counters
-            clearTimeout(inactivityTimer);
-            clearInterval(countdownInterval);
-
-            // Main timer to close session
-            inactivityTimer = setTimeout(() => {
-                alert("Your session has expired for security reasons.");
-                logout();
-            }, INACTIVITY_LIMIT_MS);
-
-            // Visual timer (countdown)
-            let secondsLeft = INACTIVITY_LIMIT_MS / 1000;
-            updateTimerDisplay(secondsLeft);
-            
-            countdownInterval = setInterval(() => {
-                secondsLeft--;
-                updateTimerDisplay(secondsLeft);
-                 // Extra safety check just in case setTimeout fails
-                if(secondsLeft <= 0) { 
-                     stopTimers();
-                     logout();
-                }
-            }, 1000);
-        }
-
-        function updateTimerDisplay(seconds) {
-            if (seconds < 0) seconds = 0;
-            const m = Math.floor(seconds / 60);
-            const s = Math.floor(seconds % 60).toString().padStart(2, '0');
-            const display = document.getElementById('timer-count');
-            if(display) display.innerText = `${m}:${s}`;
-        }
-
-        function stopTimers() {
-            clearTimeout(inactivityTimer);
-            clearInterval(countdownInterval);
-        }
-
-        // Detect movement to reset timer
-        window.onload = () => {
-            const body = document.body;
-            body.addEventListener('mousemove', resetInactivityTimer);
-            body.addEventListener('keypress', resetInactivityTimer);
-            body.addEventListener('click', resetInactivityTimer);
-            // Also reset on touch for mobile devices if accessed via tablet
-            body.addEventListener('touchstart', resetInactivityTimer);
-        };
     </script>
 </body>
 </html>
