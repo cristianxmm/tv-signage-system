@@ -7,15 +7,18 @@
     <style>
         :root { --primary: #0056b3; --bg: #f4f7f6; --card-bg: #ffffff; --text: #333; }
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; color: var(--text); }
+        
         .card { background: var(--card-bg); padding: 2.5rem; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); width: 100%; max-width: 450px; transition: all 0.3s ease; box-sizing: border-box; }
         .hidden { display: none !important; }
+        
         .logo-img { display: block; margin: 0 auto 15px auto; max-width: 180px; height: auto; }
         h2 { margin: 10px 0 5px 0; color: var(--primary); text-align: center; font-size: 1.5rem; }
         .subtitle { text-align:center; color:#666; font-size:0.95rem; margin-bottom: 25px; font-weight: 500; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #555; }
-        input[type="text"], input[type="password"], select, button { width: 100%; padding: 12px; margin-bottom: 18px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
         
-        /* SETTINGS BOX */
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #555; }
+        input, select, button { width: 100%; padding: 12px; margin-bottom: 18px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+        
+        /* Settings Box */
         .settings-box { background: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .checkbox-row { display: flex; align-items: center; margin-bottom: 10px; }
         .checkbox-row input { width: 20px; height: 20px; margin-right: 10px; cursor: pointer; }
@@ -26,11 +29,17 @@
 
         button { background-color: var(--primary); color: white; border: none; cursor: pointer; font-weight: 700; }
         button:hover { background-color: #004494; }
+        
         .dashboard-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
         .logout-btn { width:auto; padding: 8px 18px; font-size:0.85rem; background:#dc3545; margin-bottom: 0; }
         .file-upload-wrapper { border: 2px dashed #ccc; padding: 25px; text-align: center; border-radius: 8px; margin-bottom: 20px; background: #fafafa; }
-        #status-msg { text-align: center; margin-top: 10px; }
-        .success { color: #28a745; } .error { color: #dc3545; }
+        
+        #status-msg { text-align: center; margin-top: 10px; font-weight: bold; }
+        .success { color: #28a745; } 
+        .error { color: #dc3545; }
+        
+        /* Timer Text */
+        .timer { font-size: 0.85rem; color: #888; text-align: center; margin-top: 25px; }
     </style>
 </head>
 <body>
@@ -39,10 +48,12 @@
         <img src="logo.png" alt="Optibelt Logo" class="logo-img" onerror="this.style.display='none'">
         <h2>Optibelt Production Mexico</h2>
         <p class="subtitle">Display Management System</p>
+        
         <label>Username</label>
         <input type="text" id="user" placeholder="User">
         <label>Password</label>
         <input type="password" id="pass" placeholder="••••••">
+        
         <button onclick="login()">Login</button>
         <div id="login-error" class="error" style="text-align:center; margin-top:10px;"></div>
     </div>
@@ -58,7 +69,7 @@
             <option value="all">📡 ALL DISPLAYS</option>
             <option value="CrossCutter">Cross Cutter</option>
             <option value="Vulcas">Vulcas</option>
-            <option value="Production Floor">Production Floor</option>
+            <option value="ProductionFloor">Production Floor</option>
             <option value="Confections">Confections</option>
             <option value="Kalandria">Kalandria</option>
         </select>
@@ -66,7 +77,7 @@
         <label>Upload Content:</label>
         <div class="file-upload-wrapper">
             <input type="file" id="fileInput" multiple accept="image/*,video/*">
-            <small style="color:#666; display:block; margin-top:8px;">JPG, PNG, MP4</small>
+            <small style="color:#666; display: block; margin-top: 8px;">JPG, PNG, MP4</small>
         </div>
 
         <label>Slideshow Settings:</label>
@@ -83,63 +94,157 @@
         </div>
 
         <button onclick="publicar()">🚀 Send to Displays</button>
+        
         <div id="status-msg"></div>
         <div class="timer">Auto-logout in: <span id="timer-count">5:00</span></div>
     </div>
 
     <script>
+        // --- 1. SECURITY CONFIGURATION ---
+        const INACTIVITY_LIMIT_MS = 5 * 60 * 1000; // 5 Minutes
         let authToken = null;
+        let inactivityTimer;
+        let countdownInterval;
 
+        // --- 2. INTERFACE LOGIC ---
         function toggleDurationInput() {
             const isChecked = document.getElementById('autoPlayCheck').checked;
-            document.getElementById('durationContainer').classList.toggle('disabled', !isChecked);
+            const container = document.getElementById('durationContainer');
+            if(isChecked) container.classList.remove('disabled');
+            else container.classList.add('disabled');
         }
 
+        // --- 3. LOGIN / LOGOUT LOGIC ---
         async function login() {
             const u = document.getElementById('user').value;
             const p = document.getElementById('pass').value;
             const errorDiv = document.getElementById('login-error');
+
+            if(!u || !p) { errorDiv.innerText = "Please enter username and password"; return; }
+
             const token = 'Basic ' + btoa(u + ':' + p);
             errorDiv.innerText = "Authenticating...";
+
             try {
                 const res = await fetch('/api/login', { method: 'POST', headers: { 'Authorization': token } });
-                if (res.ok) { authToken = token; document.getElementById('login-view').classList.add('hidden'); document.getElementById('dashboard-view').classList.remove('hidden'); errorDiv.innerText = ""; } 
-                else { errorDiv.innerText = "Incorrect username or password"; }
-            } catch (e) { errorDiv.innerText = "Connection error"; }
+                if (res.ok) {
+                    authToken = token;
+                    mostrarDashboard();
+                    errorDiv.innerText = "";
+                } else {
+                    errorDiv.innerText = "Incorrect username or password";
+                }
+            } catch (e) {
+                errorDiv.innerText = "Server connection error";
+            }
         }
 
         function logout() {
             authToken = null;
-            document.getElementById('user').value = ''; document.getElementById('pass').value = '';
+            document.getElementById('user').value = '';
+            document.getElementById('pass').value = '';
             document.getElementById('login-view').classList.remove('hidden');
             document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('status-msg').innerText = '';
+            stopTimers();
         }
 
+        function mostrarDashboard() {
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('dashboard-view').classList.remove('hidden');
+            resetInactivityTimer(); // Start the timer!
+        }
+
+        // --- 4. UPLOAD LOGIC ---
         async function publicar() {
             const input = document.getElementById('fileInput');
             const target = document.getElementById('targetSelect').value;
+            const status = document.getElementById('status-msg');
+            
+            // Get Slideshow options
             const isAuto = document.getElementById('autoPlayCheck').checked;
             const duration = document.getElementById('durationValue').value;
-            const status = document.getElementById('status-msg');
 
-            if (input.files.length === 0) { status.innerText = "⚠️ Select a file"; status.className = "error"; return; }
+            if (input.files.length === 0) {
+                status.innerText = "⚠️ Please select a file first"; status.className = "error"; return;
+            }
 
             const formData = new FormData();
             formData.append('target', target);
-            formData.append('isAuto', isAuto);      // Enviamos decisión de autoplay
-            formData.append('duration', duration);  // Enviamos tiempo
-            for (let i = 0; i < input.files.length; i++) formData.append('archivos', input.files[i]);
+            formData.append('isAuto', isAuto);
+            formData.append('duration', duration);
 
-            status.innerText = "⏳ Uploading..."; status.className = "";
+            for (let i = 0; i < input.files.length; i++) {
+                formData.append('archivos', input.files[i]);
+            }
+
+            status.innerText = "⏳ Uploading content..."; status.className = "";
             document.querySelector('button[onclick="publicar()"]').disabled = true;
 
             try {
-                const res = await fetch('/publicar', { method: 'POST', headers: { 'Authorization': authToken }, body: formData });
-                if (res.ok) { status.innerText = "✅ Sent successfully!"; status.className = "success"; input.value = ""; } 
-                else throw new Error();
-            } catch (e) { status.innerText = "❌ Error uploading."; status.className = "error"; } 
-            finally { document.querySelector('button[onclick="publicar()"]').disabled = false; }
+                const res = await fetch('/publicar', {
+                    method: 'POST',
+                    headers: { 'Authorization': authToken },
+                    body: formData
+                });
+
+                if (res.ok) {
+                    status.innerText = "✅ Sent successfully!"; status.className = "success"; input.value = "";
+                } else { throw new Error(); }
+            } catch (e) {
+                status.innerText = "❌ Error uploading content."; status.className = "error";
+            } finally {
+                document.querySelector('button[onclick="publicar()"]').disabled = false;
+            }
         }
+
+        // --- 5. TIMER LOGIC (THE "5 MINUTES" RULE) ---
+        function resetInactivityTimer() {
+            if (!authToken) return;
+
+            // Clear previous timers
+            clearTimeout(inactivityTimer);
+            clearInterval(countdownInterval);
+
+            // Hard logout timer
+            inactivityTimer = setTimeout(() => {
+                alert("Your session has expired for security reasons.");
+                logout();
+            }, INACTIVITY_LIMIT_MS);
+
+            // Visual countdown logic
+            let secondsLeft = INACTIVITY_LIMIT_MS / 1000;
+            updateTimerDisplay(secondsLeft);
+            
+            countdownInterval = setInterval(() => {
+                secondsLeft--;
+                updateTimerDisplay(secondsLeft);
+                if(secondsLeft <= 0) { stopTimers(); logout(); }
+            }, 1000);
+        }
+
+        function updateTimerDisplay(seconds) {
+            if (seconds < 0) seconds = 0;
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+            const display = document.getElementById('timer-count');
+            if(display) display.innerText = `${m}:${s}`;
+        }
+
+        function stopTimers() {
+            clearTimeout(inactivityTimer);
+            clearInterval(countdownInterval);
+        }
+
+        // --- 6. EVENT LISTENERS (Detect movement) ---
+        window.onload = () => {
+            const body = document.body;
+            // Any of these actions resets the 5-minute timer
+            body.addEventListener('mousemove', resetInactivityTimer);
+            body.addEventListener('keypress', resetInactivityTimer);
+            body.addEventListener('click', resetInactivityTimer);
+            body.addEventListener('touchstart', resetInactivityTimer);
+        };
     </script>
 </body>
 </html>
