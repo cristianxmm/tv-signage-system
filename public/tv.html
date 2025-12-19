@@ -20,18 +20,15 @@
             max-width: 100%; max-height: 100%; object-fit: contain;
         }
         
-        /* Estilos de las flechas */
         .swiper-button-next, .swiper-button-prev { 
             color: white; 
             transform: scale(1.5); 
             text-shadow: 0 0 5px black;
-            /* La visibilidad se controlará por Javascript */
         }
 
         /* Estilos del Video */
         video { width: 100%; height: 100%; object-fit: contain; }
 
-        /* ID en la esquina (discreto) */
         #id-pantalla { position: absolute; bottom: 15px; right: 15px; color: rgba(255,255,255,0.3); font-size: 20px; z-index: 999; }
     </style>
 </head>
@@ -84,36 +81,49 @@
 
                 if (swiper) swiper.destroy(true, true);
                 
-                // 1. DETERMINAR SI ES AUTOMÁTICO O MANUAL
-                let autoplayConfig = false;
+                // REFERENCIAS A LOS BOTONES DOM
                 const nextBtn = document.querySelector('.swiper-button-next');
                 const prevBtn = document.querySelector('.swiper-button-prev');
 
+                // CONFIGURACIÓN BASE DE SWIPER
+                let swiperOptions = {
+                    effect: "fade",
+                    loop: true,
+                    pagination: { el: ".swiper-pagination", clickable: true },
+                    keyboard: { enabled: true }
+                };
+
+                // LÓGICA DE DECISIÓN: ¿AUTO O MANUAL?
                 if (payload.options && payload.options.autoPlay) {
                     // MODO AUTOMÁTICO
-                    autoplayConfig = {
+                    // 1. Agregamos configuración de autoplay
+                    swiperOptions.autoplay = {
                         delay: payload.options.duration * 1000, 
                         disableOnInteraction: false 
                     };
-                    // Ocultamos las flechas porque se mueve solo
+                    
+                    // 2. Ocultamos botones visualmente
                     nextBtn.style.display = 'none';
                     prevBtn.style.display = 'none';
+
+                    // 3. IMPORTANTE: NO agregamos 'navigation' a swiperOptions
+                    // Así Swiper no intenta controlarlos.
+
                 } else {
                     // MODO MANUAL
-                    // Mostramos las flechas (quitamos el display none)
-                    nextBtn.style.display = ''; 
-                    prevBtn.style.display = '';
+                    // 1. Mostramos botones visualmente
+                    nextBtn.style.display = 'flex'; 
+                    prevBtn.style.display = 'flex';
+
+                    // 2. Agregamos configuración de navegación
+                    swiperOptions.navigation = { 
+                        nextEl: ".swiper-button-next", 
+                        prevEl: ".swiper-button-prev" 
+                    };
                 }
 
-                // 2. INICIAR SWIPER
-                swiper = new Swiper(".mySwiper", {
-                    effect: "fade",
-                    loop: true,
-                    autoplay: autoplayConfig,
-                    navigation: { nextEl: ".swiper-button-next", prevEl: ".swiper-button-prev" },
-                    pagination: { el: ".swiper-pagination", clickable: true },
-                    keyboard: { enabled: true }
-                });
+                // INICIAR SWIPER CON LA CONFIGURACIÓN DINÁMICA
+                swiper = new Swiper(".mySwiper", swiperOptions);
             } 
             // --- LÓGICA DE VIDEO ---
             else if (payload.type === 'video') {
