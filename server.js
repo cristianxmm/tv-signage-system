@@ -8,8 +8,8 @@ const path = require('path');
 
 const PORT = 3000; 
 
-// 🔐 LISTA DE USUARIOS (Usuario : Contraseña)
-// Puedes agregar cuantos quieras aquí.
+// LISTA DE USUARIOS (Usuario : Contraseña)
+
 const USUARIOS = {
     "ADMIN": "IT_0Pm**",           // Los IT
     "LOGISTIC": "Logis_0Pm**", // Usuario de logística
@@ -120,4 +120,4 @@ app.post('/publicar', portero, upload.array('archivos', 10), (req, res) => {
 });
 
 io.on('connection', (socket) => { socket.on('join', (room) => socket.join(room)); });
-http.listen(PORT, () => console.log(`🚀 Sistema Optibelt listo en puerto ${PORT}`));
+http.listen(PORT, () => console.log(`Sistema Optibelt listo en puerto ${PORT}`));
