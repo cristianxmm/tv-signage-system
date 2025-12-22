@@ -2,13 +2,37 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Optibelt - Control Panel</title>
     <style>
         :root { --primary: #0056b3; --bg: #f4f7f6; --card-bg: #ffffff; --text: #333; }
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; color: var(--text); }
         
-        .card { background: var(--card-bg); padding: 2.5rem; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); width: 100%; max-width: 450px; transition: all 0.3s ease; box-sizing: border-box; }
+        /* CUERPO: Ajustado para permitir scroll en móviles */
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background-color: var(--bg); 
+            margin: 0; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; /* Permite crecer si es necesario */
+            color: var(--text);
+            padding: 15px; /* Margen de seguridad para bordes de celular */
+            box-sizing: border-box;
+        }
+        
+        /* TARJETA: Más flexible */
+        .card { 
+            background: var(--card-bg); 
+            padding: 2.5rem; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12); 
+            width: 100%; 
+            max-width: 450px; 
+            transition: all 0.3s ease; 
+            box-sizing: border-box; 
+        }
+        
         .hidden { display: none !important; }
         
         .logo-img { display: block; margin: 0 auto 15px auto; max-width: 180px; height: auto; }
@@ -16,30 +40,73 @@
         .subtitle { text-align:center; color:#666; font-size:0.95rem; margin-bottom: 25px; font-weight: 500; }
         
         label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #555; }
-        input, select, button { width: 100%; padding: 12px; margin-bottom: 18px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+        
+        /* INPUTS: Mejor tacto en móvil */
+        input[type="text"], input[type="password"], input[type="number"], select, button { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 18px; 
+            border: 1px solid #ddd; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            font-size: 1rem; /* Evita zoom automático en iPhone */
+        }
         
         /* Settings Box */
         .settings-box { background: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        
         .checkbox-row { display: flex; align-items: center; margin-bottom: 10px; }
-        .checkbox-row input { width: 20px; height: 20px; margin-right: 10px; cursor: pointer; }
-        .checkbox-row label { margin-bottom: 0; cursor: pointer; }
-        .duration-input { display: flex; align-items: center; gap: 10px; margin-left: 30px; transition: opacity 0.3s; }
-        .duration-input input { width: 80px; padding: 8px; margin-bottom: 0; text-align: center; }
+        .checkbox-row input { width: 22px; height: 22px; margin-right: 12px; cursor: pointer; flex-shrink: 0; }
+        .checkbox-row label { margin-bottom: 0; cursor: pointer; line-height: 1.2; }
+        
+        .duration-input { display: flex; align-items: center; gap: 10px; margin-left: 34px; transition: opacity 0.3s; flex-wrap: wrap; }
+        .duration-input input { width: 70px; padding: 8px; margin-bottom: 0; text-align: center; }
         .disabled { opacity: 0.5; pointer-events: none; }
 
-        button { background-color: var(--primary); color: white; border: none; cursor: pointer; font-weight: 700; }
+        button { background-color: var(--primary); color: white; border: none; cursor: pointer; font-weight: 700; transition: background 0.2s; }
         button:hover { background-color: #004494; }
+        button:active { transform: scale(0.98); }
         
         .dashboard-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
         .logout-btn { width:auto; padding: 8px 18px; font-size:0.85rem; background:#dc3545; margin-bottom: 0; }
-        .file-upload-wrapper { border: 2px dashed #ccc; padding: 25px; text-align: center; border-radius: 8px; margin-bottom: 20px; background: #fafafa; }
         
-        #status-msg { text-align: center; margin-top: 10px; font-weight: bold; }
+        .file-upload-wrapper { border: 2px dashed #ccc; padding: 25px; text-align: center; border-radius: 8px; margin-bottom: 20px; background: #fafafa; cursor: pointer; }
+        .file-upload-wrapper:active { background: #eef; border-color: var(--primary); }
+        
+        #status-msg { text-align: center; margin-top: 10px; font-weight: bold; min-height: 24px; }
         .success { color: #28a745; } 
         .error { color: #dc3545; }
-        
-        /* Timer Text */
         .timer { font-size: 0.85rem; color: #888; text-align: center; margin-top: 25px; }
+
+        /* --- RESPONSIVIDAD (MEDIA QUERIES) --- */
+        @media (max-width: 600px) {
+            .card {
+                padding: 1.5rem; /* Menos relleno en celular */
+                max-width: 100%;
+            }
+            
+            h2 { font-size: 1.3rem; }
+            .logo-img { max-width: 140px; }
+            
+            /* Ajuste para que la duración no se rompa en pantallas muy angostas */
+            .duration-input {
+                margin-left: 0;
+                margin-top: 10px;
+                background: rgba(0,0,0,0.03);
+                padding: 10px;
+                border-radius: 6px;
+                justify-content: center;
+            }
+            
+            .dashboard-header {
+                flex-direction: row; /* Mantener en fila */
+            }
+            
+            /* Botones más grandes para dedos */
+            button, select, input {
+                padding: 14px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -50,7 +117,7 @@
         <p class="subtitle">Display Management System</p>
         
         <label>Username</label>
-        <input type="text" id="user" placeholder="User">
+        <input type="text" id="user" placeholder="User" autocomplete="off">
         <label>Password</label>
         <input type="password" id="pass" placeholder="••••••">
         
@@ -60,7 +127,7 @@
 
     <div id="dashboard-view" class="card hidden">
         <div class="dashboard-header">
-            <img src="logo.png" alt="Optibelt Logo" class="logo-img" style="margin: 0; max-width: 100px;">
+            <img src="logo.png" alt="Optibelt Logo" class="logo-img" style="margin: 0; max-width: 80px;">
             <button onclick="logout()" class="logout-btn">Logout</button>
         </div>
 
@@ -76,10 +143,13 @@
         </select>
 
         <label>Upload Content:</label>
-        <div class="file-upload-wrapper">
-            <input type="file" id="fileInput" multiple accept="image/*,video/*">
-            <small style="color:#666; display: block; margin-top: 8px;">JPG, PNG, MP4 (400MB max)</small>
+        <div class="file-upload-wrapper" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display:none">
+            <span style="font-size: 2rem;">📂</span><br>
+            <strong>Click to select files</strong>
+            <small style="color:#666; display: block; margin-top: 8px;">JPG, PNG, MP4 (Max 300MB)</small>
         </div>
+        <div id="file-list" style="text-align:center; margin-bottom:15px; font-size:0.85rem; color:#0056b3;"></div>
 
         <label>Slideshow Settings:</label>
         <div class="settings-box">
@@ -94,18 +164,28 @@
             </div>
         </div>
 
-        <button onclick="publicar()">Send to Displays</button>
+        <button onclick="publicar()">🚀 Send to Displays</button>
         
         <div id="status-msg"></div>
         <div class="timer">Auto-logout in: <span id="timer-count">5:00</span></div>
     </div>
 
     <script>
-        // --- 1. SECURITY CONFIGURATION ---
+        // --- 1. CONFIGURATION ---
         const INACTIVITY_LIMIT_MS = 5 * 60 * 1000; 
         let authToken = null;
         let inactivityTimer;
         let countdownInterval;
+
+        // UI Helper: Show selected files name
+        document.getElementById('fileInput').addEventListener('change', function(){
+            const list = document.getElementById('file-list');
+            if(this.files.length > 0) {
+                list.innerText = `${this.files.length} file(s) selected`;
+            } else {
+                list.innerText = '';
+            }
+        });
 
         // --- 2. INTERFACE LOGIC ---
         function toggleDurationInput() {
@@ -147,6 +227,7 @@
             document.getElementById('login-view').classList.remove('hidden');
             document.getElementById('dashboard-view').classList.add('hidden');
             document.getElementById('status-msg').innerText = '';
+            document.getElementById('file-list').innerText = '';
             stopTimers();
         }
 
@@ -162,7 +243,6 @@
             const target = document.getElementById('targetSelect').value;
             const status = document.getElementById('status-msg');
             
-            // Get Slideshow options
             const isAuto = document.getElementById('autoPlayCheck').checked;
             const duration = document.getElementById('durationValue').value;
 
@@ -190,7 +270,9 @@
                 });
 
                 if (res.ok) {
-                    status.innerText = "✅ Sent successfully!"; status.className = "success"; input.value = "";
+                    status.innerText = "✅ Sent successfully!"; status.className = "success"; 
+                    input.value = "";
+                    document.getElementById('file-list').innerText = "";
                 } else { throw new Error(); }
             } catch (e) {
                 status.innerText = "❌ Error uploading content."; status.className = "error";
@@ -199,21 +281,18 @@
             }
         }
 
-        // --- 5. TIMER LOGIC (THE "5 MINUTES" RULE) ---
+        // --- 5. TIMER LOGIC ---
         function resetInactivityTimer() {
             if (!authToken) return;
 
-            // Clear previous timers
             clearTimeout(inactivityTimer);
             clearInterval(countdownInterval);
 
-            // Hard logout timer
             inactivityTimer = setTimeout(() => {
                 alert("Your session has expired for security reasons.");
                 logout();
             }, INACTIVITY_LIMIT_MS);
 
-            // Visual countdown logic
             let secondsLeft = INACTIVITY_LIMIT_MS / 1000;
             updateTimerDisplay(secondsLeft);
             
