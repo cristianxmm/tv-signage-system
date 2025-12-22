@@ -8,12 +8,14 @@ const path = require('path');
 
 const PORT = 3000; 
 
-// LISTA DE USUARIOS (Usuario : Contraseña)
+// Aquí guardamos qué se está reproduciendo en cada zona para cuando una TV se reinicia
+let estadoActual = {}; 
 
+// LISTA DE USUARIOS (Usuario : Contraseña)
 const USUARIOS = {
-    "ADMIN": "IT_0Pm**",           // Los IT
-    "LOGISTIC": "Logis_0Pm**", // Usuario de logística
-    "RH": "Rh2025**",       // Usuario de RH
+    "ADMIN": "IT_0Pm**",       
+    "LOGISTIC": "Logis_0Pm**", 
+    "RH": "Rh2025**",       
 };
 
 const DIAS_PARA_BORRAR = 30; 
@@ -28,7 +30,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// --- Limpieza de Versiones Anteriores---
+// --- FUNCIONES DE LIMPIEZA ---
 const borrarVersionesAnteriores = (archivoNuevo) => {
     const carpeta = 'uploads/';
     const nombreOriginal = archivoNuevo.originalname; 
@@ -58,32 +60,28 @@ const limpiarArchivosMuyViejos = () => {
     });
 };
 
-// --- MIDDLEWARE DE SEGURIDAD (MULTI-USUARIO) ---
+// --- MIDDLEWARE DE SEGURIDAD ---
 const portero = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'No autorizado' });
     
-    // Decodificar usuario y contraseña
     const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-    const usuarioIngresado = auth[0];
-    const passwordIngresado = auth[1];
-
-    // Verificar si el usuario existe y la contraseña coincide
-    if (USUARIOS[usuarioIngresado] && USUARIOS[usuarioIngresado] === passwordIngresado) {
+    if (USUARIOS[auth[0]] && USUARIOS[auth[0]] === auth[1]) {
         next(); 
     } else {
         return res.status(401).json({ error: 'Credenciales incorrectas' });
     }
 };
 
+// --- CONFIGURACIÓN EXPRESS ---
 app.use(express.static('public')); 
 app.use('/uploads', express.static('uploads', { maxAge: '30d' })); 
 if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
 
+// --- RUTAS ---
 app.post('/api/login', portero, (req, res) => res.json({ status: 'ok' }));
 app.get('/admin.html', portero, (req, res) => { res.sendFile(path.join(__dirname, 'public/admin.html')); });
 
-// --- RUTA DE PUBLICACIÓN ---
 app.post('/publicar', portero, upload.array('archivos', 10), (req, res) => {
     try {
         if (!req.files || req.files.length === 0) return res.status(400).json({error: 'Falta archivo'});
@@ -92,32 +90,58 @@ app.post('/publicar', portero, upload.array('archivos', 10), (req, res) => {
         req.files.forEach(file => borrarVersionesAnteriores(file));
 
         const target = req.body.target || 'all';
-        
-        // RECIBIMOS LAS OPCIONES DE SLIDESHOW
-        const autoPlay = req.body.isAuto === 'true'; // Convertir string a booleano
+        const autoPlay = req.body.isAuto === 'true'; 
         const durationSec = parseInt(req.body.duration) || 10;
-
         const primerArchivo = req.files[0];
-        
+
+        // Construir el objeto Payload (el mensaje)
+        let payload = {
+            target: target,
+            options: { autoPlay, duration: durationSec }
+        };
+
         if (primerArchivo.mimetype.includes('video')) {
-            const url = `/uploads/${primerArchivo.filename}`;
-            io.emit('contentUpdate', { target, type: 'video', url });
+            payload.type = 'video';
+            payload.url = `/uploads/${primerArchivo.filename}`;
         } else {
-            const urls = req.files.map(f => `/uploads/${f.filename}`);
-            io.emit('contentUpdate', { 
-                target, 
-                type: 'gallery', 
-                urls,
-                // Enviamos la configuración a la TV
-                options: { autoPlay, duration: durationSec } 
-            });
+            payload.type = 'gallery';
+            payload.urls = req.files.map(f => `/uploads/${f.filename}`);
         }
+        // 1. Guardar en memoria del servidor
+        if (target === 'all') {
+            // Si es para todos, reseteamos configuraciones individuales para evitar conflictos
+            estadoActual = { 'all': payload };
+        } else {
+            estadoActual[target] = payload;
+        }
+
+        // 2. Emitir a las pantallas conectadas
+        io.emit('contentUpdate', payload);
+
         res.json({ status: 'ok' });
+
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Error interno' });
     }
 });
 
-io.on('connection', (socket) => { socket.on('join', (room) => socket.join(room)); });
+// --- SOCKET.IO CON PERSISTENCIA ---
+io.on('connection', (socket) => { 
+    socket.on('join', (room) => {
+        socket.join(room);
+        console.log(`Pantalla conectada a zona: ${room}`);
+
+        // CUANDO UNA TV SE CONECTA, LE ENVIAMOS LO QUE DEBERÍA ESTAR MOSTRANDO
+        // Prioridad 1: Contenido específico para esa sala
+        if (estadoActual[room]) {
+            socket.emit('contentUpdate', estadoActual[room]);
+        } 
+        // Prioridad 2: Contenido global ('all')
+        else if (estadoActual['all']) {
+            socket.emit('contentUpdate', estadoActual['all']);
+        }
+    });
+});
+
 http.listen(PORT, () => console.log(`Sistema Optibelt listo en puerto ${PORT}`));

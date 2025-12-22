@@ -8,32 +8,17 @@
     
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
-        .view-section { display: none; width: 100vw; height: 100vh; }
+        .view-section { display: none; min-height: 100vh; height: 100vh; }
 
-        /* Estilos del Carrusel (Swiper) */
+        /* Estilos del Carrusel */
         .swiper { width: 100%; height: 100%; }
-        .swiper-slide {
-            background: #000;
-            display: flex; justify-content: center; align-items: center;
-        }
-        .swiper-slide img {
-            max-width: 100%; max-height: 100%; object-fit: contain;
-        }
-        
-        .swiper-button-next, .swiper-button-prev { 
-            color: white; transform: scale(1.5); text-shadow: 0 0 5px black;
-        }
-
-        /* Ocultar flechas forzosamente en modo auto */
-        .modo-auto .swiper-button-next,
-        .modo-auto .swiper-button-prev {
-            display: none !important;
-        }
+        .swiper-slide { background: #000; display: flex; justify-content: center; align-items: center; }
+        .swiper-slide img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .swiper-button-next, .swiper-button-prev { color: white; transform: scale(1.5); text-shadow: 0 0 5px black; }
+        .modo-auto .swiper-button-next, .modo-auto .swiper-button-prev { display: none !important; }
 
         /* Estilos del Video */
-        #vista-video {
-            display: flex; justify-content: center; align-items: center; background: #000;
-        }
+        #vista-video { display: flex; justify-content: center; align-items: center; background: #000; }
         video { width: 100%; height: 100%; object-fit: contain; }
 
         #id-pantalla { position: absolute; bottom: 15px; right: 15px; color: rgba(255,255,255,0.3); font-size: 20px; z-index: 999; }
@@ -50,8 +35,7 @@
         </div>
     </div>
 
-    <div id="vista-video" class="view-section">
-        </div>
+    <div id="vista-video" class="view-section"></div>
 
     <div id="id-pantalla">Cargando ID...</div>
 
@@ -64,18 +48,22 @@
         const myId = params.get('id') || 'general';
         
         document.getElementById('id-pantalla').innerText = `ID: ${myId}`;
-        socket.emit('join', myId);
+
+        // Lógica de conexión y reconexión
+        socket.on('connect', () => {
+            console.log("Conectado al servidor. Solicitando contenido...");
+            socket.emit('join', myId);
+        });
 
         let swiper;
 
         socket.on('contentUpdate', (payload) => {
-            
+            // Filtrar si el mensaje no es para mí
             if(payload.target !== 'all' && payload.target !== myId) return;
 
-            // 1. LIMPIEZA TOTAL (Importante para evitar trabas)
             ocultarTodo();
 
-            // 2. LÓGICA DE GALERÍA
+            // CASO 1: GALERÍA DE IMÁGENES
             if (payload.type === 'gallery') {
                 const wrapper = document.getElementById('galeria-contenido');
                 wrapper.innerHTML = '';
@@ -107,37 +95,29 @@
 
                 swiper = new Swiper(".mySwiper", swiperOptions);
             } 
-            // 3. LÓGICA DE VIDEO (RENOVADA PARA RENDIMIENTO)
+            // CASO 2: VIDEO
             else if (payload.type === 'video') {
                 const container = document.getElementById('vista-video');
                 container.style.display = 'flex';
                 
-                // TÉCNICA "NUCLEAR":
-                // En lugar de reciclar el tag <video>, lo borramos y creamos uno nuevo.
-                // Esto fuerza al navegador a liberar el Buffer anterior.
-                // Agregamos preload="auto" para ayudar a la carga.
+                // Borramos y recreamos el video para liberar memoria del navegador
                 container.innerHTML = `
                     <video id="video-display" controls autoplay muted loop playsinline preload="auto">
                         <source src="${payload.url}" type="video/mp4">
                     </video>
                 `;
                 
-                // Pequeño delay para asegurar que el DOM cargó antes de dar Play
                 setTimeout(() => {
                     const v = document.getElementById('video-display');
-                    if(v) v.play().catch(e => console.log("Audio/Play error:", e));
+                    if(v) v.play().catch(e => console.log("Intento de autoplay bloqueado:", e));
                 }, 100);
             }
         });
 
         function ocultarTodo() {
-            // Ocultar contenedores
             document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
-            
-            // LIMPIEZA PROFUNDA DE VIDEO
-            // Vaciamos el contenedor del video para matar el proceso anterior
-            const container = document.getElementById('vista-video');
-            container.innerHTML = ''; 
+            // Limpieza de video para evitar fugas de memoria
+            document.getElementById('vista-video').innerHTML = ''; 
         }
     </script>
 </body>
