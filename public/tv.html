@@ -21,17 +21,19 @@
         }
         
         .swiper-button-next, .swiper-button-prev { 
-            color: white; 
-            transform: scale(1.5); 
-            text-shadow: 0 0 5px black;
+            color: white; transform: scale(1.5); text-shadow: 0 0 5px black;
         }
 
+        /* Ocultar flechas forzosamente en modo auto */
         .modo-auto .swiper-button-next,
         .modo-auto .swiper-button-prev {
-            display: none !important; 
+            display: none !important;
         }
 
         /* Estilos del Video */
+        #vista-video {
+            display: flex; justify-content: center; align-items: center; background: #000;
+        }
         video { width: 100%; height: 100%; object-fit: contain; }
 
         #id-pantalla { position: absolute; bottom: 15px; right: 15px; color: rgba(255,255,255,0.3); font-size: 20px; z-index: 999; }
@@ -42,16 +44,14 @@
     <div id="vista-galeria" class="view-section">
         <div class="swiper mySwiper">
             <div class="swiper-wrapper" id="galeria-contenido"></div>
-            
             <div class="swiper-button-next"></div>
             <div class="swiper-button-prev"></div>
             <div class="swiper-pagination"></div>
         </div>
     </div>
 
-    <div id="vista-video" class="view-section" style="display: flex; justify-content: center; align-items: center;">
-        <video id="video-display" controls autoplay muted loop playsinline preload="auto"></video>
-    </div>
+    <div id="vista-video" class="view-section">
+        </div>
 
     <div id="id-pantalla">Cargando ID...</div>
 
@@ -72,8 +72,10 @@
             
             if(payload.target !== 'all' && payload.target !== myId) return;
 
+            // 1. LIMPIEZA TOTAL (Importante para evitar trabas)
             ocultarTodo();
 
+            // 2. LÓGICA DE GALERÍA
             if (payload.type === 'gallery') {
                 const wrapper = document.getElementById('galeria-contenido');
                 wrapper.innerHTML = '';
@@ -85,56 +87,57 @@
 
                 if (swiper) swiper.destroy(true, true);
                 
-                // Obtenemos el contenedor principal
                 const swiperContainer = document.querySelector('.mySwiper');
-
                 let swiperOptions = {
-                    effect: "fade",
-                    loop: true,
+                    effect: "fade", loop: true,
                     pagination: { el: ".swiper-pagination", clickable: true },
                     keyboard: { enabled: true }
                 };
 
-                // LÓGICA DE CLASES CSS
                 if (payload.options && payload.options.autoPlay) {
-                    // MODO AUTO:
-                    // 1. Agregamos la clase .modo-auto al contenedor (CSS ocultará las flechas)
                     swiperContainer.classList.add('modo-auto');
-
-                    // 2. Configuración de tiempo
                     swiperOptions.autoplay = {
                         delay: payload.options.duration * 1000, 
                         disableOnInteraction: false 
                     };
-                    
-                    // 3. NO pasamos navigation a Swiper
-
                 } else {
-                    // MODO MANUAL:
-                    // 1. Quitamos la clase .modo-auto (Las flechas volverán a ser visibles)
                     swiperContainer.classList.remove('modo-auto');
-
-                    // 2. Activamos navegación en Swiper
-                    swiperOptions.navigation = { 
-                        nextEl: ".swiper-button-next", 
-                        prevEl: ".swiper-button-prev" 
-                    };
+                    swiperOptions.navigation = { nextEl: ".swiper-button-next", prevEl: ".swiper-button-prev" };
                 }
 
                 swiper = new Swiper(".mySwiper", swiperOptions);
             } 
+            // 3. LÓGICA DE VIDEO (RENOVADA PARA RENDIMIENTO)
             else if (payload.type === 'video') {
-                const v = document.getElementById('video-display');
-                v.src = payload.url;
-                document.getElementById('vista-video').style.display = 'flex';
-                v.play().catch(e => console.log("Interacción requerida"));
+                const container = document.getElementById('vista-video');
+                container.style.display = 'flex';
+                
+                // TÉCNICA "NUCLEAR":
+                // En lugar de reciclar el tag <video>, lo borramos y creamos uno nuevo.
+                // Esto fuerza al navegador a liberar el Buffer anterior.
+                // Agregamos preload="auto" para ayudar a la carga.
+                container.innerHTML = `
+                    <video id="video-display" controls autoplay muted loop playsinline preload="auto">
+                        <source src="${payload.url}" type="video/mp4">
+                    </video>
+                `;
+                
+                // Pequeño delay para asegurar que el DOM cargó antes de dar Play
+                setTimeout(() => {
+                    const v = document.getElementById('video-display');
+                    if(v) v.play().catch(e => console.log("Audio/Play error:", e));
+                }, 100);
             }
         });
 
         function ocultarTodo() {
+            // Ocultar contenedores
             document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
-            const v = document.getElementById('video-display');
-            v.pause(); v.src = "";
+            
+            // LIMPIEZA PROFUNDA DE VIDEO
+            // Vaciamos el contenedor del video para matar el proceso anterior
+            const container = document.getElementById('vista-video');
+            container.innerHTML = ''; 
         }
     </script>
 </body>
