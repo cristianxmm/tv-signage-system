@@ -102,7 +102,7 @@
 
     <script>
         // --- 1. SECURITY CONFIGURATION ---
-        const INACTIVITY_LIMIT_MS = 5 * 60 * 1000; // 5 Minutes
+        const INACTIVITY_LIMIT_MS = 5 * 60 * 1000; 
         let authToken = null;
         let inactivityTimer;
         let countdownInterval;
@@ -153,7 +153,7 @@
         function mostrarDashboard() {
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('dashboard-view').classList.remove('hidden');
-            resetInactivityTimer(); // Start the timer!
+            resetInactivityTimer(); 
         }
 
         // --- 4. UPLOAD LOGIC ---
@@ -237,10 +237,8 @@
             clearInterval(countdownInterval);
         }
 
-        // --- 6. EVENT LISTENERS (Detect movement) ---
         window.onload = () => {
             const body = document.body;
-            // Any of these actions resets the 5-minute timer
             body.addEventListener('mousemove', resetInactivityTimer);
             body.addEventListener('keypress', resetInactivityTimer);
             body.addEventListener('click', resetInactivityTimer);

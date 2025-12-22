@@ -26,11 +26,9 @@
             text-shadow: 0 0 5px black;
         }
 
-        /* --- AQUÍ ESTÁ EL TRUCO --- */
-        /* Esta clase forzará a ocultar las flechas sin importar lo que diga Swiper */
         .modo-auto .swiper-button-next,
         .modo-auto .swiper-button-prev {
-            display: none !important; /* El !important es la clave */
+            display: none !important; 
         }
 
         /* Estilos del Video */
@@ -100,7 +98,7 @@
                 // LÓGICA DE CLASES CSS
                 if (payload.options && payload.options.autoPlay) {
                     // MODO AUTO:
-                    // 1. Agregamos la clase .modo-auto al contenedor (CSS ocultará las flechas a la fuerza)
+                    // 1. Agregamos la clase .modo-auto al contenedor (CSS ocultará las flechas)
                     swiperContainer.classList.add('modo-auto');
 
                     // 2. Configuración de tiempo

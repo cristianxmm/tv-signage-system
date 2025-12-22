@@ -11,9 +11,9 @@ const PORT = 3000;
 // 🔐 LISTA DE USUARIOS (Usuario : Contraseña)
 // Puedes agregar cuantos quieras aquí.
 const USUARIOS = {
-    "ADMIN": "IT_0Pm**",           // El jefe
+    "ADMIN": "IT_0Pm**",           // Los IT
     "LOGISTIC": "Logis_0Pm**", // Usuario de logística
-    "RH": "Rh2025**",       // Usuario de ventas
+    "RH": "Rh2025**",       // Usuario de RH
 };
 
 const DIAS_PARA_BORRAR = 30; 
@@ -28,7 +28,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// --- Limpieza de Versiones Anteriores (Ahorra espacio) ---
+// --- Limpieza de Versiones Anteriores---
 const borrarVersionesAnteriores = (archivoNuevo) => {
     const carpeta = 'uploads/';
     const nombreOriginal = archivoNuevo.originalname; 
@@ -70,7 +70,7 @@ const portero = (req, res, next) => {
 
     // Verificar si el usuario existe y la contraseña coincide
     if (USUARIOS[usuarioIngresado] && USUARIOS[usuarioIngresado] === passwordIngresado) {
-        next(); // ¡Pase usted!
+        next(); 
     } else {
         return res.status(401).json({ error: 'Credenciales incorrectas' });
     }
