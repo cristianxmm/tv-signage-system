@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optibelt Display</title>
+    
+    <style>
+        /* 1. ESTILOS (Offline & Clean) */
+        body { 
+            margin: 0; overflow: hidden; background: #000; 
+            font-family: Arial, sans-serif; 
+            user-select: none; 
+        }
+
+        #main-container {
+            width: 100vw; height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            background: black;
+            position: relative;
+        }
+
+        /* 2. MEDIA */
+        #main-image, #main-video {
+            width: 100%; height: 100%; object-fit: contain;
+            display: none; 
+            position: absolute; top: 0; left: 0;
+        }
+        
+        .active { display: block !important; }
+
+        /* 3. FLECHAS (UI MEJORADA) */
+        .nav-btn {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.2); 
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 4rem; padding: 10px;
+            cursor: pointer; z-index: 100;
+            border: none; outline: none;
+            transition: all 0.3s;
+        }
+
+        .nav-btn:hover {
+            background-color: rgba(85, 156, 248, 0.9); 
+            color: white;
+            opacity: 1;
+        }
+
+        /* Si es modo manual, las flechas son más visibles */
+        body.manual-mode .nav-btn {
+            background-color: rgba(0,0,0,0.6);
+            color: #fff;
+            opacity: 1;
+        }
+
+        #prev-btn { left: 0; border-radius: 0 10px 10px 0; }
+        #next-btn { right: 0; border-radius: 10px 0 0 10px; }
+
+        /* ESTADO */
+        #status-msg {
+            color: #888; font-size: 24px; text-align: center; z-index: 10;
+        }
+
+        #watermark {
+            position: fixed; bottom: 20px; left: 20px; z-index: 50; 
+            color: rgba(255, 255, 255, 0.4); font-size: 14px; 
+            background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="watermark">ID: ---</div>
+
+    <button id="prev-btn" class="nav-btn">❮</button>
+    <button id="next-btn" class="nav-btn">❯</button>
+
+    <div id="main-container">
+        <div id="status-msg">CONECTANDO...</div>
+        
+        <img id="main-image" alt="">
+        <video id="main-video" muted playsinline></video>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+
+<script>
+    // --- 1. CONFIGURACIÓN ---
+    const params = new URLSearchParams(window.location.search);
+    const tvId = params.get('tvId') || 'default';
+    document.getElementById('watermark').innerText = 'ID: ' + tvId;
+
+    let playlist = [];
+    let currentIndex = 0;
+    let slideTimer = null;
+    let isAutoPlay = true;
+    let defaultInterval = 10000;
+
+    const imgEl = document.getElementById('main-image');
+    const videoEl = document.getElementById('main-video');
+    const statusEl = document.getElementById('status-msg');
+
+    // --- 2. SOCKET ---
+    const socket = io({
+        reconnection: true,
+        reconnectionDelay: 2000
+    });
+
+    socket.on('connect', () => {
+        console.log("Conectado");
+        loadContent(); 
+    });
+
+    socket.on('disconnect', () => {
+        statusEl.innerText = "SIN CONEXIÓN...";
+        statusEl.style.display = 'block';
+    });
+
+    // RECARGA LIMPIA AL GUARDAR
+    socket.on('refresh_' + tvId, () => {
+        console.log("Recibida orden de refresco...");
+        // Pequeño delay de seguridad para asegurar que el servidor guardó el archivo
+        setTimeout(() => {
+            window.location.reload(true);
+        }, 500);
+    });
+
+    // --- 3. CARGA DE CONTENIDO ---
+    async function loadContent() {
+        try {
+            statusEl.innerText = "CARGANDO...";
+            statusEl.style.display = 'block';
+
+            // Usamos timestamp para evitar caché
+            const res = await fetch(`/api/tv-content?tvId=${tvId}&t=${Date.now()}`);
+            if (!res.ok) throw new Error("Error API");
+            const data = await res.json();
+            
+            // Construir Playlist
+            const newPlaylist = [];
+            const cacheBuster = Date.now();
+            
+            if (data.activeImages) data.activeImages.forEach(url => newPlaylist.push({ type: 'image', url: url + '?v=' + cacheBuster }));
+            if (data.activeVideos) data.activeVideos.forEach(url => newPlaylist.push({ type: 'video', url: url + '?v=' + cacheBuster }));
+            
+            defaultInterval = data.interval || 10000;
+            
+            // LECTURA ROBUSTA DEL AUTOPLAY
+            // Aseguramos que se lea bien aunque venga como string "true" o booleano true
+            if (data.isAuto === 'false' || data.isAuto === false) {
+                isAutoPlay = false;
+            } else {
+                isAutoPlay = true;
+            }
+
+            console.log("Modo AutoPlay:", isAutoPlay);
+
+            // Ajuste visual (clase CSS para mostrar flechas más fuertes si es manual)
+            if (!isAutoPlay) document.body.classList.add('manual-mode');
+            else document.body.classList.remove('manual-mode');
+
+            if (newPlaylist.length > 0) {
+                playlist = newPlaylist;
+                statusEl.style.display = 'none';
+                
+                // --- CORRECCIÓN CRÍTICA ---
+                // NO preguntamos si está activo. FORZAMOS el inicio siempre.
+                // Esto garantiza que si pasas de Manual a Auto, el timer arranque.
+                stopAll(); 
+                playIndex(0); 
+                
+            } else {
+                statusEl.innerText = "LISTA VACÍA";
+                stopAll();
+            }
+
+        } catch(e) { 
+            console.error("Error loadContent:", e);
+            setTimeout(loadContent, 5000); 
+        }
+    }
+
+    function stopAll() {
+        clearTimeout(slideTimer);
+        videoEl.pause();
+        // Importante: No borramos el src aquí para evitar parpadeos negros, 
+        // lo hacemos en el playIndex al cambiar.
+        imgEl.classList.remove('active');
+        videoEl.classList.remove('active');
+    }
+
+    // --- 4. REPRODUCTOR ---
+    function playIndex(index) {
+        clearTimeout(slideTimer); // Matar cualquier timer anterior
+        
+        // 1. Limpieza de memoria del video anterior
+        videoEl.pause();
+        videoEl.removeAttribute('src'); 
+        videoEl.load(); 
+
+        // 2. Ocultar todo
+        imgEl.classList.remove('active');
+        videoEl.classList.remove('active');
+
+        if (playlist.length === 0) return;
+
+        // 3. Cálculo de Bucle Infinito
+        if (index >= playlist.length) currentIndex = 0;
+        else if (index < 0) currentIndex = playlist.length - 1;
+        else currentIndex = index;
+
+        const item = playlist[currentIndex];
+
+        // 4. Reproducción
+        if (item.type === 'image') {
+            imgEl.src = item.url;
+            imgEl.onload = () => {
+                imgEl.classList.add('active');
+                // SI ES AUTO, iniciamos el timer
+                if (isAutoPlay) {
+                    slideTimer = setTimeout(next, defaultInterval);
+                }
+            };
+            imgEl.onerror = () => next();
+
+        } else if (item.type === 'video') {
+            videoEl.src = item.url;
+            videoEl.classList.add('active');
+            videoEl.currentTime = 0;
+            
+            const playPromise = videoEl.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(e => {
+                    console.log("Autoplay bloqueado o error:", e);
+                    // Si falla el play y estamos en auto, saltamos
+                    if(isAutoPlay) slideTimer = setTimeout(next, 2000); 
+                });
+            }
+
+            videoEl.onended = () => { 
+                if(isAutoPlay) next(); 
+                // Si NO es autoplay, se queda parado en el último frame (video pausa)
+            };
+            
+            videoEl.onerror = () => { 
+                if(isAutoPlay) setTimeout(next, 1000); 
+            };
+        }
+    }
+
+    // --- 5. CONTROLES ---
+    function next() { playIndex(currentIndex + 1); }
+    function prev() { playIndex(currentIndex - 1); }
+
+    document.getElementById('next-btn').onclick = (e) => { e.stopPropagation(); next(); };
+    document.getElementById('prev-btn').onclick = (e) => { e.stopPropagation(); prev(); };
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.keyCode === 39) next();
+        if (e.key === 'ArrowLeft' || e.keyCode === 37) prev();
+    });
+
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+For this project, it is necessary to install the following:
+
+    Node.js
+
+    Dependencies: 
+    npm install express socket.io multer
+    npm install dotenv

@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optibelt Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --opti-green: #84bd00;
+            --opti-dark: #004e64;
+            --bg-light: #f4f6f8;
+            --text-main: #333;
+            --border-color: #e1e4e8;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-main);
+        }
+
+        /* --- LOGIN VIEW --- */
+        #login-view {
+            height: 100vh;
+            width: 100vw;
+            background: linear-gradient(135deg, var(--opti-dark) 0%, #002a36 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+        }
+
+        .login-logo {
+            max-width: 180px;
+            height: auto;
+            margin-bottom: 15px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .login-title {
+            color: var(--opti-dark);
+            margin-bottom: 20px;
+            font-weight: 300;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 1.2rem;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px 15px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        .btn-login {
+            width: 100%;
+            background: var(--opti-green);
+            color: white;
+            border: none;
+            padding: 12px;
+            margin-top: 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 1rem;
+        }
+
+        .btn-login:hover {
+            background: #73a500;
+        }
+
+        /* --- DASHBOARD LAYOUT --- */
+        .hidden {
+            display: none !important;
+        }
+
+        .top-bar {
+            background: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .dept-label {
+            font-size: 0.75rem;
+            color: #999;
+            font-weight: bold;
+            letter-spacing: 1px;
+            display: block;
+        }
+
+        .dept-name {
+            margin: 0;
+            color: var(--opti-dark);
+        }
+
+        .dashboard-container {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        /* --- CARDS --- */
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
+        }
+
+        .card h3 {
+            margin-top: 0;
+            border-bottom: 2px solid var(--bg-light);
+            padding-bottom: 15px;
+            color: var(--opti-dark);
+        }
+
+        /* --- COMPONENTES UI --- */
+        .upload-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .file-input {
+            border: 2px dashed #ddd;
+            padding: 20px;
+            flex-grow: 1;
+            border-radius: 6px;
+            background: #fafafa;
+            cursor: pointer;
+        }
+
+        .screen-selector-container {
+            background: var(--opti-dark);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 5px 15px rgba(0, 78, 100, 0.3);
+        }
+
+        .screen-select {
+            padding: 10px;
+            width: 45%;
+            border-radius: 6px;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        /* --- GRID DE IMÁGENES --- */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .img-item {
+            position: relative;
+            height: 90px;
+            border-radius: 6px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid transparent;
+            background: #eee;
+        }
+
+        .img-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.6;
+            transition: 0.3s;
+            filter: grayscale(100%);
+        }
+
+        .img-item:has(input:checked) {
+            border-color: var(--opti-green);
+            box-shadow: 0 0 0 2px rgba(132, 189, 0, 0.2);
+        }
+
+        .img-item:has(input:checked) img {
+            opacity: 1;
+            filter: grayscale(0%);
+        }
+
+        .img-item.locked {
+            cursor: not-allowed;
+            opacity: 0.5;
+            border: 1px dashed #ccc;
+        }
+
+        .img-item.locked input {
+            pointer-events: none;
+        }
+
+        .img-item input[type="checkbox"] {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 20px;
+            height: 20px;
+            z-index: 10;
+            cursor: pointer;
+        }
+
+        .badge-owner {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 0.6rem;
+            text-align: center;
+            padding: 2px 0;
+        }
+
+        /* --- LISTA DE VIDEOS --- */
+        .video-list-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+
+        .video-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .video-item:hover {
+            background: #f9f9f9;
+        }
+
+        .video-item.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f0f0f0;
+        }
+
+        .video-item input {
+            margin-right: 15px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--opti-green);
+        }
+
+        /* --- CONTROLES Y BOTONES --- */
+        .config-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f9fbfd;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 10px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+            margin-left: 10px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--opti-green);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(24px);
+        }
+
+        .interval-input {
+            padding: 8px;
+            width: 60px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .btn-action {
+            background: var(--opti-dark);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .btn-action-help {
+            background: var(--bg-light);
+            color: var(--opti-dark);
+            border: 2px solid white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .btn-action-help:hover {
+            background: white;
+        }
+
+        .btn-logout {
+            background: #bdc3c7;
+            color: #333;
+        }
+
+        .btn-save {
+            width: 100%;
+            background: var(--opti-green);
+            padding: 15px;
+            font-size: 1.1rem;
+            margin-top: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-save:hover {
+            background: #73a500;
+            transform: translateY(-1px);
+        }
+
+        /* --- BOTÓN ELIMINAR --- */
+        .btn-delete {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 5px 8px;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+        .btn-delete:hover { background: #c0392b; }
+        
+        .img-item .btn-delete {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            z-index: 20;
+        }
+        
+        .video-item .btn-delete {
+            margin-left: 10px;
+        }
+
+        /* --- TOAST NOTIFICATIONS --- */
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            min-width: 250px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideIn 0.3s forwards, fadeOut 0.5s forwards 3s; 
+        }
+
+        .toast.success { background-color: var(--opti-green); }
+        .toast.error { background-color: #e74c3c; color: white; }
+        .toast.info { background-color: var(--opti-dark); }
+
+        @keyframes slideIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+
+        /* --- PANEL LATERAL DEL MAPA/Manual --- */
+        .map-panel {
+            position: fixed;
+            top: 0;
+            right: -450px; 
+            width: 400px;
+            height: 100vh;
+            background-color: white;
+            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.15);
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 2000;
+            padding: 25px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        .map-panel.open {
+            right: 0; 
+        }
+
+        .close-panel-btn {
+            background: none;
+            border: none;
+            font-size: 32px;
+            line-height: 1;
+            cursor: pointer;
+            float: right;
+            color: #999;
+            transition: 0.2s;
+        }
+
+        .close-panel-btn:hover {
+            color: #e74c3c;
+        }
+
+        .map-image-panel {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            cursor: pointer; 
+            transition: transform 0.2s ease, box-shadow 0.2s ease; 
+        }
+
+        /* Efecto al pasar el mouse por encima */
+        .map-image-panel:hover {
+            transform: scale(1.03); 
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15); 
+        }
+        /* --- BOTÓN DEL MANUAL PDF --- */
+        .btn-pdf {
+            display: block;
+            width: 100%;
+            background-color: #f4f6f8;
+            color: var(--opti-dark);
+            border: 2px solid var(--opti-dark);
+            padding: 12px;
+            text-align: center;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 6px;
+            transition: 0.3s;
+            box-sizing: border-box;
+        }
+
+        .btn-pdf:hover {
+            background-color: var(--opti-dark);
+            color: white;
+        }
+
+        /* --- MODAL DE IMAGEN (LIGHTBOX) --- */
+        .image-modal {
+            display: none; /* Oculto por defecto */
+            position: fixed;
+            z-index: 3000; /* Por encima de todo, incluido el panel lateral */
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.85); /* Fondo oscuro semitransparente */
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px); /* Desenfoque elegante de fondo */
+        }
+
+        .modal-content {
+            max-width: 90vw;
+            max-height: 90vh;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            animation: zoomIn 0.3s ease;
+            object-fit: contain; /* Asegura que la imagen no se deforme */
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            color: #f1f1f1;
+            font-size: 45px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .close-modal:hover {
+            color: var(--opti-green); /* Usa el verde de tu marca al pasar el mouse */
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+
+        }
+
+        /* --- CONTENEDOR DEL PDF --- */
+        .pdf-container {
+            width: 85vw; /* Ocupa el 85% del ancho de la pantalla */
+            height: 85vh; /* Ocupa el 85% del alto de la pantalla */
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            animation: zoomIn 0.3s ease;
+        }
+
+        .pdf-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none; /* Quita el borde feo por defecto del iframe */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="login-view">
+        <div class="login-card">
+            <img src="logo.png" alt="Optibelt Logo" class="login-logo">
+            <h2 class="login-title">Optibelt Signage System</h2>
+
+            <input type="text" id="user" placeholder="Usuario" class="input-field" onkeypress="if(event.key === 'Enter') document.getElementById('pass').focus()">
+            <input type="password" id="pass" placeholder="Contraseña" class="input-field" onkeypress="if(event.key === 'Enter') login()">
+            <button class="btn-login" onclick="login()">INGRESAR</button>
+        </div>
+    </div>
+
+    <div id="dashboard-view" class="hidden">
+        
+        <div class="top-bar">
+            <div>
+                <span class="dept-label">DEPARTAMENTO</span>
+                <h2 id="dept-title" class="dept-name">...</h2>
+            </div>
+            <button class="btn-action btn-logout" onclick="location.reload()">Salir</button>
+        </div>
+
+        <div class="dashboard-container">
+
+            <div class="screen-selector-container">
+                <div>
+                    <label style="font-weight:bold; display:flexbox; margin-bottom:5px;">Configurar Pantalla:</label>
+                    <select id="screen-selector" onchange="loadContent()" class="screen-select">
+                        <option value="Extrusion">(1) Extrusion</option>
+                        <option value="Vulcas">(2) Vulcas</option>
+                        <option value="ProductionBoard">(3) ProductionBoard</option>
+                        <option value="Kalandria">(4) Kalandria</option>
+                        <option value="CrossCutter">(5) CrossCutter</option>
+                        <option value="Confections">(6) Confections</option>
+                        <option value="Reception">(7) Reception</option>
+                    </select>
+                </div>
+                <button type="button" class="btn-action-help" onclick="toggleMapPanel()"> Manual / MapaTV´s</button>
+            </div>
+
+            <div class="card">
+                <h3>Subir Nuevo Contenido</h3>
+                <div class="upload-row">
+                    <input type="file" id="fileInput" multiple class="file-input">
+                    <button class="btn-action" onclick="uploadFiles()">SUBIR ARCHIVOS</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Carrusel de Imágenes</h3>
+                
+                <div class="config-row">
+                    <div>
+                        <strong>Reproducción Automática</strong><br>
+                        <small style="color:#666;">Si se apaga, se usará control manual.</small>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="checkAuto">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="config-row">
+                    <div><strong>Tiempo por imagen (segundos)</strong></div>
+                    <input type="number" id="interval" value="10" class="interval-input">
+                </div>
+
+                <div id="image-grid" class="gallery-grid">
+                    </div>
+            </div>
+
+            <div class="card">
+                <h3>Videoteca</h3>
+                <p style="color:#666; font-size: 0.9rem; margin-bottom:15px;">
+                    Selecciona los videos para el menú de la TV.
+                </p>
+                
+                <div id="video-list" class="video-list-container">
+                </div>
+
+            </div>
+            <button class="btn-action btn-save" onclick="saveConfig()">💾 GUARDAR CAMBIOS EN TV</button>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <div id="mapPanel" class="map-panel">
+        <button class="close-panel-btn" onclick="toggleMapPanel()">&times;</button>
+        <h3 style="margin-top:0; color:var(--opti-dark);">Centro de Ayuda</h3>
+    
+        <p style="font-size: 0.9em; color:#666; margin-bottom: 15px;">
+            📍 <strong>Ubicación de Pantallas:</strong> Consulta el plano para confirmar la TV destino.
+        </p>
+        
+        <img src="TV´sMap.png" alt="Plano de la planta" class="map-image-panel" onclick="openImageModal(this.src)" title="Haz clic para ampliar">
+    
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
+
+        <h4 style="color:var(--opti-dark); margin-bottom: 10px; margin-top: 0;">¿Dudas con el sistema?</h4>
+        <p style="font-size:0.9rem; color:#666; margin-bottom: 15px;">
+            Descarga o lee la guía paso a paso para subir tu contenido.
+        </p>
+        
+        <button onclick="openPdfModal('Manual de Usuario TV Signage.pdf')" class="btn-pdf" style="cursor: pointer; font-family: inherit; font-size: 1rem;">
+            📄 Abrir Manual de Usuario (Español)
+        </button>
+        
+        <p style="font-size:0.9rem; color:#666; margin-bottom: 15px;">
+            Download or read the step-by-step guide to upload your content.
+        </p>
+        
+        <button onclick="openPdfModal('User_Manual _TV_Signage_English.pdf')" class="btn-pdf" style="cursor: pointer; font-family: inherit; font-size: 1rem;">
+            📄 Open User Manual (English)
+        </button>
+        
+    </div>
+
+    <script>
+        let authToken = null;
+        let myFolder = '';
+
+        // --- FUNCIÓN LOGIN ---
+        async function login() {
+            const u = document.getElementById('user').value.trim();
+            const p = document.getElementById('pass').value.trim();
+            
+            if (!u || !p) return showToast("Ingrese usuario y contraseña");
+
+            const token = 'Basic ' + btoa(u + ':' + p);
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Authorization': token }
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    authToken = token;
+                    myFolder = data.folder;
+                    
+                    document.getElementById('dept-title').innerText = myFolder.toUpperCase();
+                    document.getElementById('login-view').classList.add('hidden');
+                    document.getElementById('dashboard-view').classList.remove('hidden');
+                    
+                    loadContent();
+                } else {
+                    showToast("🚫 Credenciales incorrectas");
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Error de conexión con el servidor. ¿Está encendido?");
+            }
+        }
+
+        // --- CARGAR CONTENIDO (IMÁGENES/VIDEOS) ---
+        async function loadContent() {
+            if (!authToken) return;
+            const tvId = document.getElementById('screen-selector').value;
+
+            try {
+                const res = await fetch(`/api/admin-content?tvId=${tvId}`, {
+                    headers: { 'Authorization': authToken }
+                });
+                
+                if (!res.ok) throw new Error("Error cargando datos");
+
+                const data = await res.json();
+
+                // Cargar Configuración Actual
+                document.getElementById('interval').value = (data.config.interval || 10000) / 1000;
+                document.getElementById('checkAuto').checked = data.config.isAuto;
+
+                // Limpiar contenedores
+                const imgGrid = document.getElementById('image-grid');
+                const vidList = document.getElementById('video-list');
+                imgGrid.innerHTML = '';
+                vidList.innerHTML = '';
+
+                // Renderizar Archivos
+                data.allFiles.forEach(file => {
+                    const isMine = (file.owner === myFolder);
+                    const lockClass = isMine ? '' : 'locked';
+                    const disabledAttr = isMine ? '' : 'disabled';
+                    const deleteBtn = isMine ? `<button class="btn-delete" onclick="deleteFile('${file.url}', event)" title="Eliminar">🗑️</button>` : '';
+
+                    if (file.type === 'video') {
+                        const isActive = (data.config.activeVideos || []).includes(file.url);
+                        const checked = isActive ? 'checked' : '';
+
+                        vidList.innerHTML += `
+                            <label class="video-item ${lockClass}">
+                                <input type="checkbox" class="video-check" value="${file.url}" ${checked} ${disabledAttr}>
+                                <div style="flex-grow:1">
+                                    <span style="font-weight:500;">${file.name}</span><br>
+                                    <span style="font-size:0.75rem; color:#888;">Propiedad de: ${file.owner}</span>
+                                </div>
+                                <span style="font-size:1.2rem;">🎬</span>
+                                ${deleteBtn}
+                            </label>`;
+                    } else {
+                        const isActive = (data.config.activeImages || []).includes(file.url);
+                        const checked = isActive ? 'checked' : '';
+                        
+                        const div = document.createElement('div');
+                        div.className = `img-item ${lockClass}`;
+                        div.innerHTML = `
+                            ${deleteBtn}
+                            <input type="checkbox" class="img-check" value="${file.url}" ${checked} ${disabledAttr}>
+                            <img src="${file.url}" loading="lazy">
+                            <div class="badge-owner">${file.owner}</div>
+                        `;      
+                        
+                        if (isMine) {
+                            div.onclick = (e) => {
+                                // Evitamos que seleccione si hizo click en el basurero o en el checkbox directamente
+                                if (e.target.type !== 'checkbox' && e.target.tagName !== 'BUTTON') {
+                                    const cb = div.querySelector('input');
+                                    cb.checked = !cb.checked;
+                                }
+                            };
+                        }
+                        imgGrid.appendChild(div);
+                    }
+                });
+            } catch (e) {
+                console.error(e);
+                showToast("No se pudo cargar el contenido.");
+            }
+        }
+
+        // --- SUBIR ARCHIVOS ---
+        async function uploadFiles() {
+            const input = document.getElementById('fileInput');
+            if (input.files.length === 0) return showToast("Selecciona archivos primero");
+
+            const formData = new FormData();
+            for (let f of input.files) formData.append('files', f);
+
+            const btn = document.querySelector('button[onclick="uploadFiles()"]');
+            const originalText = btn.innerText;
+            btn.innerText = "SUBIENDO... (Espere)";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': authToken },
+                    body: formData
+                });
+                
+                if (res.ok) {
+                    showToast("✅ Archivos subidos correctamente");
+                    input.value = "";
+                    loadContent();
+                } else {
+                    showToast("❌ Error al subir. Archivo muy pesado o formato no válido.");
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Error de red al subir.");
+            }
+
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+
+        // --- GUARDAR CONFIGURACIÓN ---
+        async function saveConfig() {
+            const tvId = document.getElementById('screen-selector').value;
+            const activeImages = Array.from(document.querySelectorAll('.img-check:checked')).map(cb => cb.value);
+            const activeVideos = Array.from(document.querySelectorAll('.video-check:checked')).map(cb => cb.value);
+            const interval = document.getElementById('interval').value * 1000;
+            const isAuto = document.getElementById('checkAuto').checked;
+
+            try {
+                const res = await fetch('/api/save-config', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': authToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ tvId, activeImages, activeVideos, interval, isAuto })
+                });
+
+                if (res.ok) {
+                    showToast("✅ Configuración guardada en " + tvId);
+                } else {
+                    showToast("❌ Error del servidor al guardar.");
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Error de conexión. Revisa si el servidor está corriendo.");
+            }
+        }
+
+        // --- ELIMINAR ARCHIVO ---
+        async function deleteFile(url, event) {
+            if(event) event.stopPropagation(); 
+            
+            if (!confirm("⚠️ ¿Estás seguro de que deseas eliminar este archivo de forma permanente?\n\nEsta acción no se puede deshacer.")) return;
+
+            try {
+                const res = await fetch('/api/delete-file', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': authToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+
+                if (res.ok) {
+                    loadContent(); 
+                } else {
+                    const data = await res.json();
+                    showToast("❌ Error: " + (data.error || "No se pudo eliminar el archivo."));
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Error de red. ¿Sigue encendido el servidor?");
+            }
+        }
+
+        // --- FUNCIÓN PARA NOTIFICACIONES TOAST ---
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerText = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3500);
+        }
+
+        // --- FUNCIÓN DEL PANEL LATERAL DE AYUDA ---
+        function toggleMapPanel() {
+            const panel = document.getElementById('mapPanel');
+            panel.classList.toggle('open'); 
+        }
+        // --- FUNCIONES DEL MODAL DE IMAGEN ---
+        function openImageModal(imgSrc) {
+            const modal = document.getElementById('imageModal');
+            const expandedImg = document.getElementById('expandedImg');
+            
+            expandedImg.src = imgSrc;
+            modal.style.display = 'flex';
+        }
+
+        function closeImageModal() {
+            document.getElementById('imageModal').style.display = 'none';
+        }
+        
+        // Cierra el modal si el usuario presiona la tecla "Escape"
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "Escape") {
+                closeImageModal();
+            }
+
+        });
+        // --- FUNCIONES DEL MODAL DE PDF ---
+        function openPdfModal(pdfSrc) {
+            const modal = document.getElementById('pdfModal');
+            const pdfFrame = document.getElementById('pdfFrame');
+            
+            pdfFrame.src = pdfSrc; // Le inyecta la ruta del PDF al iframe
+            modal.style.display = 'flex';
+        }
+
+        function closePdfModal() {
+            const modal = document.getElementById('pdfModal');
+            const pdfFrame = document.getElementById('pdfFrame');
+            
+            modal.style.display = 'none';
+            pdfFrame.src = ""; // Limpiamos el src para que el PDF no siga cargando en segundo plano
+        }
+    </script>
+    <div id="imageModal" class="image-modal" onclick="closeImageModal()">
+        <span class="close-modal" onclick="closeImageModal()">&times;</span>
+        <img class="modal-content" id="expandedImg" onclick="event.stopPropagation()">
+    </div>
+    <div id="pdfModal" class="image-modal" onclick="closePdfModal()">
+        <span class="close-modal" onclick="closePdfModal()">&times;</span>
+        <div class="pdf-container" onclick="event.stopPropagation()">
+            <iframe id="pdfFrame" src=""></iframe>
+        </div>
+    </div>
+</body>
+</html>

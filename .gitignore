@@ -1,0 +1,15 @@
+# 1. Dependencies
+node_modules/
+
+# 2. Secrets
+.env
+
+# 3. Database
+playlist.json
+
+# 4. Uploads
+uploads/
+
+# 5. OS Junk files
+.DS_Store
+Thumbs.db
